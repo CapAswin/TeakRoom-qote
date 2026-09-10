@@ -657,12 +657,16 @@ $('#prevBtn').addEventListener('click', () => gotoStep(step - 1));
 $('#nextBtn').addEventListener('click', () => gotoStep(step + 1));
 
 $('#addSectionBtn').addEventListener('click', () => {
-  const idx = data.push({ name: 'NEW AREA', items: [] }) - 1;
-  step = idx;
-  pendingFocus = { sel: `[data-sec="${idx}"] .sec-name`, select: true };
-  render();
-  persist();
-  showToast('Section added');
+  if (!catalogState.data) {
+    /* catalog unavailable — fall back to a blank section */
+    const idx = data.push({ name: 'NEW AREA', items: [] }) - 1;
+    step = idx;
+    pendingFocus = { sel: `[data-sec="${idx}"] .sec-name`, select: true };
+    render();
+    persist();
+    return;
+  }
+  openRoomModal('add');
 });
 
 /* ---------- Excel import ---------- */
@@ -824,6 +828,7 @@ $('#resetBtn').addEventListener('click', () => {
   render();
   persist(true);
   showToast('Saved to history — starting fresh');
+  openRoomModal('init');
 });
 
 $('#saveQuoteBtn').addEventListener('click', () => {
@@ -927,6 +932,7 @@ document.addEventListener('keydown', e => {
 
 /* ---------- Product catalog & room selection modal ---------- */
 const catalogState = { data: null };
+let modalInsertAt = null;
 
 async function loadCatalog() {
   try {
@@ -949,8 +955,8 @@ function buildRoomList() {
     label.dataset.room = cat.room;
     const box = el('input');
     box.type = 'checkbox';
+    box.checked = false;
     box.setAttribute('aria-label', 'Include ' + cat.room);
-    box.checked = !!cat.init_selection;
     box.addEventListener('change', syncModalConfirm);
     const name = el('span', 'modal-room-name');
     name.textContent = cat.room;
@@ -962,14 +968,36 @@ function buildRoomList() {
   });
 }
 
+/* preselect = true honours init_selection; false leaves everything unchecked. */
+function resetRoomChecks(preselect) {
+  const cats = catalogState.data.categories || [];
+  $$('#modalRoomList .modal-room').forEach((row, i) => {
+    const cat = cats[i];
+    row.querySelector('input').checked = !!(preselect && cat && cat.init_selection);
+  });
+  syncModalConfirm();
+}
+
 function syncModalConfirm() {
   const hasSelection = $$('#modalRoomList input[type="checkbox"]').some(cb => cb.checked);
   $('#modalConfirm').disabled = !hasSelection;
   $('#modalConfirm').title = hasSelection ? '' : 'Select at least one room';
 }
 
-function showRoomModal() {
-  syncModalConfirm();
+/* mode 'init' -> new quote, preselect rooms marked init_selection, insert at end.
+   mode 'add'  -> add rooms to an existing quote, nothing preselected, insert after the active section. */
+function openRoomModal(mode) {
+  if (!catalogState.data) {
+    loadCatalog().then(ok => {
+      if (ok) openRoomModal(mode);
+      else showToast('Catalog not available');
+    });
+    return;
+  }
+  const adding = mode === 'add';
+  resetRoomChecks(!adding);
+  modalInsertAt = adding && data.length ? step : null;
+  $('#modalConfirm').textContent = adding ? 'Add selected' : 'Start with selected';
   $('#roomModal').setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
 }
@@ -1023,8 +1051,14 @@ $('#modalConfirm').addEventListener('click', () => {
     return;
   }
   const blankStarter = data.length === 1 && data[0].items.length === 0;
-  data = blankStarter ? incoming : data.concat(incoming);
-  step = data.length - 1;
+  if (blankStarter) {
+    data = incoming;
+  } else if (modalInsertAt == null) {
+    data = data.concat(incoming);
+  } else {
+    data.splice(modalInsertAt + 1, 0, ...incoming);
+  }
+  step = data.indexOf(incoming[incoming.length - 1]);
   hideRoomModal();
   render();
   persist(true);
@@ -1055,11 +1089,7 @@ document.addEventListener('keydown', e => {
 
 /* Reopen the room picker from the toolbar to add catalog rooms */
 $('#roomModalBtn').addEventListener('click', () => {
-  if (!catalogState.data) {
-    loadCatalog().then(ok => { if (ok) showRoomModal(); else showToast('Catalog not available'); });
-    return;
-  }
-  showRoomModal();
+  openRoomModal('add');
 });
 
 /* ---------- Init ---------- */
@@ -1075,5 +1105,5 @@ loadCatalog().then(ok => {
   if (!ok) return;
   const noItems = !data.some(sec => sec.items.length > 0);
   const noMeta = !(meta.qno || meta.client || meta.place);
-  if (noItems && noMeta) showRoomModal();
+  if (noItems && noMeta) openRoomModal('init');
 });
