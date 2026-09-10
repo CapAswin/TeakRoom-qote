@@ -22,6 +22,7 @@
   --line: #e5e7eb;
   --hover-line: #d1d5db;
   --muted: #6b7280;
+  --sub: #989fab;
   --placeholder: #9ca3af;
   --import-blue: #3b82f6;
   --import-blue-light: #eff6ff;
@@ -55,6 +56,7 @@ body.dark {
   --line: #3f3f46;
   --hover-line: #52525b;
   --muted: #a1a1aa;
+  --sub: #7f7f88;
   --placeholder: #71717a;
   --import-blue: #93c5fd;
   --import-blue-light: #1e3a5f;
@@ -150,7 +152,7 @@ header h1 {
 .header-sub {
   margin: 4px 0 0;
   font-size: 0.88rem;
-  color: var(--muted);
+  color: var(--sub);
   font-weight: 400;
 }
 
@@ -417,7 +419,7 @@ main {
 /* ---------- Legend ---------- */
 .legend {
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--sub);
   margin: 2px 0 14px;
   display: flex;
   gap: 16px;
@@ -476,7 +478,7 @@ main {
 
 .step-label {
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--sub);
   font-weight: 500;
   flex: 1;
   text-align: center;
@@ -527,7 +529,7 @@ main {
 
 .section-head {
   background: transparent;
-  color: var(--ink);
+  color: var(--accent);
   padding: 14px 18px;
   display: flex;
   justify-content: space-between;
@@ -541,7 +543,7 @@ main {
   min-width: 0;
   border: none;
   background: transparent;
-  color: var(--ink);
+  color: var(--accent);
   font-weight: 800;
   font-size: 0.95rem;
   letter-spacing: -0.02em;
@@ -648,7 +650,7 @@ main {
   font-weight: 600;
   font-size: 0.95rem;
   padding: 2px 0;
-  color: var(--ink);
+  color: #F97316;
   border-bottom: 1px dashed transparent;
   transition: border-color var(--transition);
 }
@@ -728,7 +730,7 @@ main {
 
 .calc-note {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--sub);
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
 }
@@ -839,6 +841,11 @@ main {
   font-weight: 600;
 }
 
+/* Item names are always the warm orange, even when imported from Excel. */
+.item-name.imported {
+  color: #F97316 !important;
+}
+
 /* ---------- Empty State ---------- */
 .empty-state {
   background: var(--panel);
@@ -857,6 +864,7 @@ main {
 
 .empty-hint {
   font-size: 0.85rem;
+  color: var(--sub);
 }
 
 /* ---------- Grand Total Bar ---------- */
@@ -904,6 +912,15 @@ main {
   padding: 10px 14px;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.view-settings .legend {
+  margin: 0;
 }
 
 .view-settings-row {
@@ -922,7 +939,7 @@ main {
 .setting-label {
   font-size: 0.72rem;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--sub);
   white-space: nowrap;
 }
 
@@ -1256,13 +1273,13 @@ body.compact .meta-grid input {
 
 .view-cards .section-head {
   background: transparent;
-  color: var(--ink);
+  color: var(--accent);
   padding: 0 0 8px;
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 2px solid var(--accent);
 }
 
 .view-cards .section-head .sec-name {
-  color: var(--ink);
+  color: var(--accent);
   font-size: 1.1em;
 }
 
@@ -1597,7 +1614,7 @@ body.modal-open {
 .modal-sub {
   margin: 4px 0 0;
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--sub);
   line-height: 1.45;
 }
 
@@ -1628,7 +1645,7 @@ body.modal-open {
   border-radius: var(--radius-sm);
   background: var(--teak-tint);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--sub);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -1698,7 +1715,7 @@ body.modal-open {
 
 .modal-room-count {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--sub);
   font-family: var(--font-mono);
   white-space: nowrap;
 }
