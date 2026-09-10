@@ -116,7 +116,8 @@ function downloadBlob(blob, filename) {
 }
 
 function quoteFilename() {
-  return (meta.qno || 'quotation').replace(/[/\\]/g, '-') + '.xlsx';
+  const name = [meta.client, meta.place].filter(Boolean).join(' ').trim();
+  return (name || 'quotation').replace(/[/\\]/g, '-') + '.xlsx';
 }
 
 async function exportOfficialExcel() {
@@ -125,7 +126,7 @@ async function exportOfficialExcel() {
   const sections = quoteSections();
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Teak Room Interiors';
-  wb.title = (meta.client || 'Quotation') + ' Furniture';
+  wb.title = [meta.client, meta.place].filter(Boolean).join(' - ').trim() || 'Quotation';
   const ws = wb.addWorksheet('Quotation', {
     pageSetup: {
       paperSize: 1,
@@ -381,11 +382,12 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
   const mikasa = mikasaSrc ? '<img src="' + mikasaSrc + '" alt="Mikasa">' : '';
   const hw = hwSrc ? '<img src="' + hwSrc + '" alt="Hardware">' : '<div class="hw-fallback">Hettich &nbsp;&nbsp; HÄFELE</div>';
 
+  const pdfName = [meta.client, meta.place].filter(Boolean).join(' ').trim() || 'Quotation';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>${escapeHtml(meta.qno || 'Quotation')}</title>
+<title>${escapeHtml(pdfName)}</title>
 <style>
   @page { size: letter portrait; margin: 10mm; }
   * { box-sizing: border-box; }
