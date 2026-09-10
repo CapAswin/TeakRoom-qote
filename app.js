@@ -501,6 +501,26 @@ function buildSection(sec, sIdx) {
   const total = el('span', 'stotal');
   total.setAttribute('aria-label', 'Section total');
 
+  /* Duplicate section — insert an identical copy (deep-cloned items) right after. */
+  const cp = el('button', 'sec-dupe no-print');
+  cp.type = 'button';
+  cp.title = 'Duplicate section';
+  cp.setAttribute('aria-label', 'Duplicate section');
+  cp.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<rect x="6" y="6" width="8" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/>' +
+    '<path d="M10 2H3a1 1 0 0 0-1 1v8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  cp.addEventListener('click', () => {
+    const idx = sIdx + 1;
+    data.splice(idx, 0, {
+      name: sec.name + ' (Copy)',
+      items: JSON.parse(JSON.stringify(sec.items))
+    });
+    step = idx;
+    render();
+    persist();
+    showToast('Section duplicated');
+  });
+
   const rm = el('button', 'sec-remove no-print');
   rm.type = 'button';
   rm.textContent = '\u2715';
@@ -516,7 +536,7 @@ function buildSection(sec, sIdx) {
     showToast('Section removed');
   });
 
-  head.append(nameInput, total, rm);
+  head.append(nameInput, total, cp, rm);
   secEl.appendChild(head);
 
   /* Wrap items in a container for grid/cards views */
