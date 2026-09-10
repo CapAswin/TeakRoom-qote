@@ -66,6 +66,8 @@ let metaImported = { qno: false, client: false, place: false, validtill: false }
 function normalizeItem(it) {
   const base = {
     name: it.name || '',
+    desc: it.desc || '',
+    dim: it.dim || '',
     override: it.override == null ? null : it.override,
     importedFields: {}
   };
@@ -184,10 +186,10 @@ function toggleTheme() {
 function loadTheme() {
   try {
     const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'dark') applyTheme(true);
-    else if (saved === 'light') applyTheme(false);
-    else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
-  } catch { /* ignore */ }
+    applyTheme(saved === 'dark');
+  } catch {
+    applyTheme(false);
+  }
 }
 
 /* ---------- Pricing engine ----------
@@ -682,27 +684,68 @@ function parseWorkbookIntoData(wb) {
     const c4 = String(row[4] == null ? '' : row[4]).trim();
     const c5 = String(row[5] == null ? '' : row[5]).trim();
     const c6 = String(row[6] == null ? '' : row[6]).trim();
-    if (!c0) return;
+    if (!c0) {
+      if (String(c1).toLowerCase() === 'description' && /length/i.test(String(c3) + String(c2))) format = 'official';
+      return;
+    }
 
     const lc = c0.toLowerCase();
-    if (lc.startsWith('quotation no')) { meta.qno = c1; metaImported.qno = true; return; }
-    if (lc === 'client') { meta.client = c1; metaImported.client = true; return; }
-    if (lc === 'place') { meta.place = c1; metaImported.place = true; return; }
+    if (lc.startsWith('quotation no')) {
+      meta.qno = (c0.split(':').slice(1).join(':').trim() || c1);
+      metaImported.qno = true;
+      return;
+    }
+    if (lc.startsWith('client name') || lc === 'client') {
+      meta.client = (c0.includes(':') ? c0.split(':').slice(1).join(':').trim() : c1);
+      metaImported.client = true;
+      return;
+    }
+    if (lc.startsWith('place')) {
+      meta.place = (c0.includes(':') ? c0.split(':').slice(1).join(':').trim() : c1);
+      metaImported.place = true;
+      return;
+    }
     if (lc.startsWith('quote valid')) { meta.validtill = c1; metaImported.validtill = true; return; }
     if (c0 === EXPORT_HEADER[0] && c1 === EXPORT_HEADER[1]) { format = 'new'; return; }
+    if (String(c1).toLowerCase() === 'description' && /length/i.test(c3 + c2 + c1)) { format = 'official'; return; }
     if (lc === 'total' || lc === 'grand total') return;
+    if (/^(core meterial|hardware meterial|note|bank details|date of quote)/i.test(lc)) return;
 
     /* A row with only column A filled is a section header */
-    if (!c1) { cur = { name: c0.toUpperCase(), items: [] }; out.push(cur); return; }
+    if (!c1 && !c2 && !c4 && !c5 && !c6) {
+      cur = { name: c0.toUpperCase(), items: [] };
+      out.push(cur);
+      return;
+    }
     if (!cur) { cur = { name: 'IMPORTED ITEMS', items: [] }; out.push(cur); }
 
     const addItem = item => {
       item.importedFields = { name: true };
       Object.keys(item).forEach(k => {
-        if (k !== 'name' && k !== 'type') item.importedFields[k] = true;
+        if (k !== 'name' && k !== 'type' && k !== 'desc' && k !== 'dim') item.importedFields[k] = true;
       });
       cur.items.push(item);
     };
+
+    if (/^[A-F]$/.test(c0) && /carcass|shutter|hinge|drawer|handle|boxing/i.test(c1)) return;
+
+    if (format === 'official') {
+      const areaRaw = c4;
+      const rateRaw = c5;
+      const amtRaw = c6;
+      const dim = c3;
+      const desc = c1 && c1 !== c0 ? c1 : '';
+      if (/lumpsum/i.test(areaRaw) || (!areaRaw && !rateRaw && amtRaw)) {
+        addItem({ name: c0, type: 'fixed', amount: num(amtRaw), desc, dim });
+      } else if (/rft/i.test(dim)) {
+        addItem({ name: c0, type: 'running', length: num(areaRaw), rate: num(rateRaw), desc, dim });
+      } else if (/nos/i.test(areaRaw)) {
+        addItem({ name: c0, type: 'quantity', qty: num(areaRaw), rate: num(rateRaw), desc, dim });
+      } else {
+        addItem({ name: c0, type: 'area', length: num(areaRaw), height: 1, rate: num(rateRaw), desc, dim });
+      }
+      return;
+    }
 
     if (format === 'new') {
       const type = c1.toLowerCase();
@@ -753,62 +796,16 @@ $('#importFile').addEventListener('change', e => {
 });
 
 /* ---------- Excel / PDF export ---------- */
-function itemToRow(item) {
-  const amt = computeAmount(item);
-  switch (item.type) {
-    case 'area':
-      return [item.name, 'Area (sqft)', item.length, item.height, '', item.rate, amt];
-    case 'running':
-      return [item.name, 'Running (rft)', item.length, '', '', item.rate, amt];
-    case 'quantity':
-      return [item.name, 'Quantity', '', '', item.qty, item.rate, amt];
-    case 'fixed':
-    default:
-      return [item.name, 'Fixed', '', '', '', '', item.amount];
-  }
-}
-
 function exportExcel() {
-  try {
-    const wb = XLSX.utils.book_new();
-    const rows = [
-      ['Quotation No.', meta.qno],
-      ['Client', meta.client],
-      ['Place', meta.place],
-      ['Quote Valid Till', meta.validtill],
-      [],
-      EXPORT_HEADER
-    ];
-    let grand = 0;
-    data.forEach(sec => {
-      rows.push([sec.name]);
-      let sectionTotal = 0;
-      sec.items.forEach(item => {
-        const amt = computeAmount(item);
-        sectionTotal += amt;
-        rows.push(itemToRow(item));
-      });
-      rows.push(['TOTAL', '', '', '', '', '', sectionTotal]);
-      rows.push([]);
-      grand += sectionTotal;
-    });
-    rows.push(['GRAND TOTAL', '', '', '', '', '', grand]);
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 36 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }];
-    XLSX.utils.book_append_sheet(wb, ws, 'Quotation');
-    XLSX.writeFile(wb, (meta.qno || 'quotation').replace(/[/\\]/g, '-') + '.xlsx');
-    showToast('Excel exported successfully');
-  } catch (err) {
-    showToast('Excel export failed: ' + err.message);
-  }
+  exportOfficialExcel()
+    .then(() => showToast('Excel exported — Teak Room format'))
+    .catch(err => showToast('Excel export failed: ' + err.message));
 }
 
 function exportPdf() {
-  const sections = $$('.section');
-  sections.forEach(s => s.dataset.hidden = 'false');
-  window.print();
-  render();
+  exportOfficialPdf()
+    .then(() => showToast('PDF print dialog opened'))
+    .catch(err => showToast('PDF export failed: ' + err.message));
 }
 
 $('#exportExcelBtn').addEventListener('click', exportExcel);

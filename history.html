@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -15,30 +15,39 @@
     :root {
       --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
-      --ink: #1a1612;
-      --paper: #f5f3ef;
+      --ink: #111111;
+      --paper: #f3f4f6;
       --panel: #ffffff;
-      --teak: #2c1a0e;
-      --teak-light: #5c3d2e;
-      --teak-tint: #f0ebe4;
-      --amber: #c4702a;
-      --line: #d8d3ca;
-      --muted: #6b6560;
-      --danger: #9e3333;
-      --radius: 8px;
+      --teak: #111111;
+      --teak-light: #374151;
+      --teak-tint: #f3f4f6;
+      --accent: #3b82f6;
+      --line: #e5e7eb;
+      --muted: #6b7280;
+      --danger: #ef4444;
+      --bar-bg: #111111;
+      --bar-fg: #ffffff;
+      --strong-bg: #111111;
+      --strong-fg: #ffffff;
+      --radius: 20px;
     }
 
     body.dark {
-      --ink: #e8e4dc;
-      --paper: #141210;
-      --panel: #1e1c18;
-      --teak: #c4a882;
-      --teak-light: #d4bfa0;
-      --teak-tint: #2a2620;
-      --amber: #e09060;
-      --line: #333028;
-      --muted: #8a8478;
-      --danger: #e06060;
+      color-scheme: dark;
+      --ink: #f4f4f5;
+      --paper: #0b0b0c;
+      --panel: #1c1c1f;
+      --teak: #f4f4f5;
+      --teak-light: #d4d4d8;
+      --teak-tint: #2a2a2e;
+      --accent: #60a5fa;
+      --line: #3f3f46;
+      --muted: #a1a1aa;
+      --danger: #f87171;
+      --bar-bg: #050505;
+      --bar-fg: #ffffff;
+      --strong-bg: #f4f4f5;
+      --strong-fg: #111111;
     }
 
     body {
@@ -54,22 +63,32 @@
     ::selection { background: var(--teak-tint); }
 
     header {
-      background: var(--teak);
-      color: #f2efe6;
-      padding: 16px 24px;
+      background: transparent;
+      color: var(--ink);
+      padding: 20px 24px 0;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .header-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 22px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
       flex-wrap: wrap;
+      box-shadow: 0 1px 2px rgba(17, 17, 17, 0.04);
     }
 
     header h1 {
       font-family: var(--font-body);
-      font-weight: 700;
-      font-size: 1.2rem;
+      font-weight: 800;
+      font-size: 1.4rem;
       margin: 0;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.04em;
     }
 
     .header-actions {
@@ -83,22 +102,35 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 6px 14px;
-      border-radius: 5px;
-      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 0.82rem;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.08);
-      color: #f2efe6;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
       transition: background 0.15s;
       font-family: var(--font-body);
     }
 
-    .header-actions a:hover,
+    .header-actions a {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    body.dark .header-actions a {
+      color: #fff;
+    }
+
+    .header-actions a:hover {
+      filter: brightness(1.08);
+    }
+
     .header-actions button:hover {
-      background: rgba(255,255,255,0.18);
+      background: var(--teak-tint);
     }
 
     header .icon-moon { display: block; }
@@ -129,7 +161,7 @@
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: var(--radius);
-      padding: 14px 18px;
+      padding: 16px 18px;
       margin-bottom: 10px;
       display: grid;
       grid-template-columns: 1fr auto;
@@ -183,10 +215,10 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 7px 14px;
-      border-radius: 5px;
-      border: 1px solid var(--teak);
-      background: var(--teak);
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
       color: #fff;
       font-weight: 600;
       font-size: 0.8rem;
@@ -197,7 +229,7 @@
       white-space: nowrap;
     }
 
-    .open-btn:hover { background: var(--teak-light); }
+    .open-btn:hover { filter: brightness(1.08); }
 
     .del-btn {
       display: inline-flex;
@@ -231,24 +263,24 @@
 
     .item-count {
       background: var(--teak-tint);
-      color: var(--teak);
+      color: var(--ink);
       font-weight: 600;
       padding: 1px 6px;
-      border-radius: 4px;
+      border-radius: 8px;
       font-size: 0.72rem;
       font-family: var(--font-mono);
     }
 
     body.dark .item-count {
-      background: #2a2620;
-      color: #c4a882;
+      background: var(--teak-tint);
+      color: var(--ink);
     }
 
     .total-badge {
       font-family: var(--font-mono);
       font-weight: 700;
       font-size: 1.2rem;
-      color: var(--teak);
+      color: var(--ink);
       white-space: nowrap;
     }
 
@@ -273,14 +305,16 @@
 </head>
 <body>
   <header>
-    <h1>Quote History</h1>
-    <div class="header-actions">
-      <button type="button" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-        <svg class="icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <svg class="icon-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 11a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.5 2.5l1.4 1.4M12.1 12.1l1.4 1.4M13.5 2.5l-1.4 1.4M3.9 12.1l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
-      <a href="index.html">+ New Quote</a>
-    </div>
+      <div class="header-card">
+        <h1>Quote History</h1>
+        <div class="header-actions">
+          <button type="button" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+            <svg class="icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="icon-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 11a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.5 2.5l1.4 1.4M12.1 12.1l1.4 1.4M13.5 2.5l-1.4 1.4M3.9 12.1l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a href="index.html">+ New Quote</a>
+        </div>
+      </div>
   </header>
 
   <main id="app">
@@ -418,10 +452,8 @@
     function loadTheme() {
       try {
         const saved = localStorage.getItem(THEME_KEY);
-        if (saved === 'dark') applyTheme(true);
-        else if (saved === 'light') applyTheme(false);
-        else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
-      } catch { /* ignore */ }
+        applyTheme(saved === 'dark');
+      } catch { applyTheme(false); }
     }
 
     document.getElementById('themeToggle').addEventListener('click', () => {

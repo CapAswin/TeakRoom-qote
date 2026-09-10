@@ -6,41 +6,65 @@
 :root {
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
-  --ink: #1a1612;
-  --paper: #f5f3ef;
+  --ink: #111111;
+  --paper: #f3f4f6;
   --panel: #ffffff;
-  --teak: #2c1a0e;
-  --teak-light: #5c3d2e;
-  --teak-tint: #f0ebe4;
-  --amber: #c4702a;
-  --amber-light: #fdf3ec;
-  --danger: #9e3333;
-  --line: #d8d3ca;
-  --muted: #6b6560;
-  --import-blue: #1f5fa8;
-  --import-blue-light: #e8f0fa;
-  --radius: 8px;
-  --shadow-sm: 0 1px 2px rgba(26, 22, 18, 0.04);
-  --shadow-md: 0 4px 12px rgba(26, 22, 18, 0.06);
+  --teak: #111111;
+  --teak-light: #374151;
+  --teak-tint: #f3f4f6;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --on-accent: #ffffff;
+  --amber: #3b82f6;
+  --amber-light: #eff6ff;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --line: #e5e7eb;
+  --hover-line: #d1d5db;
+  --muted: #6b7280;
+  --placeholder: #9ca3af;
+  --import-blue: #3b82f6;
+  --import-blue-light: #eff6ff;
+  --bar-bg: #111111;
+  --bar-fg: #ffffff;
+  --strong-bg: #111111;
+  --strong-fg: #ffffff;
+  --focus-ring: rgba(17, 17, 17, 0.08);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --shadow-sm: 0 1px 2px rgba(17, 17, 17, 0.04);
+  --shadow-md: 0 8px 24px rgba(17, 17, 17, 0.06);
   --transition: 0.15s ease;
 }
 
 body.dark {
-  --ink: #e8e4dc;
-  --paper: #141210;
-  --panel: #1e1c18;
-  --teak: #c4a882;
-  --teak-light: #d4bfa0;
-  --teak-tint: #2a2620;
-  --amber: #e09060;
-  --amber-light: #2a2018;
-  --danger: #e06060;
-  --line: #333028;
-  --muted: #8a8478;
-  --import-blue: #6aafff;
-  --import-blue-light: #1a2a40;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+  --ink: #f4f4f5;
+  --paper: #0b0b0c;
+  --panel: #1c1c1f;
+  --teak: #f4f4f5;
+  --teak-light: #d4d4d8;
+  --teak-tint: #2a2a2e;
+  --accent: #60a5fa;
+  --accent-hover: #3b82f6;
+  --on-accent: #ffffff;
+  --amber: #60a5fa;
+  --amber-light: #1e3a5f;
+  --danger: #f87171;
+  --success: #4ade80;
+  --line: #3f3f46;
+  --hover-line: #52525b;
+  --muted: #a1a1aa;
+  --placeholder: #71717a;
+  --import-blue: #93c5fd;
+  --import-blue-light: #1e3a5f;
+  --bar-bg: #050505;
+  --bar-fg: #ffffff;
+  --strong-bg: #f4f4f5;
+  --strong-fg: #111111;
+  --focus-ring: rgba(255, 255, 255, 0.12);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* ---------- Reset ---------- */
@@ -58,8 +82,13 @@ body {
   background: var(--paper);
   color: var(--ink);
   padding-bottom: 80px;
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body.dark {
+  color-scheme: dark;
 }
 
 input, button, select {
@@ -71,39 +100,58 @@ input, button, select {
 }
 
 ::selection {
-  background: #cfe0d6;
+  background: #dbeafe;
 }
 
 body.dark ::selection {
-  background: #3a5a48;
+  background: #1e3a5f;
 }
 
 :focus-visible {
-  outline: 2px solid var(--teak);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 /* ---------- Header ---------- */
 header {
-  background: var(--teak);
-  color: #f2efe6;
-  padding: 14px 24px 14px;
+  background: transparent;
+  color: var(--ink);
+  padding: 20px 20px 0;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.header-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px 24px 20px;
+  box-shadow: var(--shadow-sm);
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 header h1 {
   font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-weight: 800;
+  font-size: 1.55rem;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.header-sub {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  font-weight: 400;
 }
 
 /* ---------- Save Status ---------- */
@@ -112,10 +160,10 @@ header h1 {
   align-items: center;
   gap: 6px;
   font-size: 0.74rem;
-  color: #cfe0d6;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 4px 10px;
+  color: var(--muted);
+  background: var(--teak-tint);
+  border: 1px solid var(--line);
+  padding: 5px 12px;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -124,18 +172,18 @@ header h1 {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c8b98f;
+  background: #d4d4d8;
   flex: none;
   transition: background var(--transition), box-shadow var(--transition);
 }
 
 .save-dot.saved {
-  background: #8fce9a;
-  box-shadow: 0 0 0 2px rgba(143, 206, 154, 0.35);
+  background: var(--success);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
 }
 
 .save-dot.error {
-  background: var(--amber);
+  background: var(--danger);
 }
 
 .header-right {
@@ -145,18 +193,18 @@ header h1 {
 }
 
 .icon-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #f2efe6;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition);
+  transition: background var(--transition), border-color var(--transition);
 }
 
 .icon-btn svg {
@@ -176,66 +224,72 @@ body.dark .icon-btn .icon-sun {
 }
 
 .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--teak-tint);
+  border-color: var(--hover-line);
 }
 
 body.dark .icon-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--panel);
+  border-color: var(--line);
 }
 
 /* ---------- Meta Grid ---------- */
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 12px;
-  border-radius: 8px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
 }
 
 .meta-grid label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: #bcd2c5;
-  margin-bottom: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
 }
 
 .meta-grid input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  padding: 6px 9px;
-  border-radius: 5px;
-  font-size: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 11px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
   transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.meta-grid input::placeholder {
+  color: var(--placeholder);
 }
 
 .meta-grid input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 header input.imported {
-  color: var(--import-blue-light) !important;
+  color: var(--import-blue) !important;
 }
 
 /* ---------- Main & Toolbar ---------- */
 main {
   max-width: 1440px;
-  margin: 12px auto;
+  margin: 16px auto;
   padding: 0 20px;
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  box-shadow: var(--shadow-sm);
 }
 
 .toolbar > * {
@@ -248,14 +302,14 @@ main {
   background: var(--panel);
   color: var(--ink);
   font-weight: 600;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
   cursor: pointer;
   transition: background var(--transition), border-color var(--transition), color var(--transition), transform 0.1s ease;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .btn svg {
@@ -263,9 +317,9 @@ main {
 }
 
 .btn:hover {
-  border-color: var(--teak);
+  border-color: var(--hover-line);
   background: var(--teak-tint);
-  color: var(--teak);
+  color: var(--ink);
 }
 
 .btn:active {
@@ -273,13 +327,15 @@ main {
 }
 
 .btn-primary {
-  background: var(--teak);
-  color: #fff;
-  border-color: var(--teak);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
 }
 
 .btn-primary:hover {
-  background: var(--teak-light);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--on-accent);
 }
 
 .btn-ghost {
@@ -302,15 +358,16 @@ main {
 }
 
 .btn-accent {
-  background: var(--amber);
-  color: #fff;
-  border-color: var(--amber);
+  background: var(--strong-bg);
+  color: var(--strong-fg);
+  border-color: var(--strong-bg);
 }
 
 .btn-accent:hover {
-  background: #a85e22;
-  border-color: #a85e22;
-  color: #fff;
+  filter: brightness(1.12);
+  color: var(--strong-fg);
+  background: var(--strong-bg);
+  border-color: var(--strong-bg);
 }
 
 /* ---------- Import Button ---------- */
@@ -318,21 +375,22 @@ main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px dashed var(--amber);
-  background: var(--amber-light);
-  color: var(--amber);
-  font-size: 0.82rem;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition), border-style var(--transition);
+  transition: background var(--transition), border-style var(--transition), color var(--transition);
 }
 
 .import-btn:hover {
-  background: #fde8d8;
+  background: var(--teak-tint);
   border-style: solid;
+  color: var(--ink);
 }
 
 .import-btn svg {
@@ -369,7 +427,7 @@ main {
 }
 
 .legend .dot.man {
-  background: var(--ink);
+  background: var(--success);
 }
 
 /* ---------- Wizard ---------- */
@@ -382,12 +440,12 @@ main {
 }
 
 .wiz-btn {
-  min-width: 34px;
-  height: 30px;
-  border: 1px solid var(--teak);
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
   background: var(--panel);
-  color: var(--teak);
-  border-radius: 6px;
+  color: var(--ink);
+  border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
@@ -440,7 +498,7 @@ main {
 }
 
 .dots button.active {
-  background: var(--teak);
+  background: var(--accent);
   transform: scale(1.25);
 }
 
@@ -459,13 +517,14 @@ main {
 }
 
 .section-head {
-  background: var(--teak);
-  color: #fff;
-  padding: 10px 14px;
+  background: transparent;
+  color: var(--ink);
+  padding: 14px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .section-head .sec-name {
@@ -473,9 +532,10 @@ main {
   min-width: 0;
   border: none;
   background: transparent;
-  color: #fff;
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 800;
   font-size: 0.95rem;
+  letter-spacing: -0.02em;
   padding: 2px 4px;
   border-bottom: 1px dashed transparent;
   transition: border-color var(--transition);
@@ -483,28 +543,29 @@ main {
 
 .section-head .sec-name:focus {
   outline: none;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
+  border-bottom: 1px dashed var(--accent);
 }
 
 .section-head .stotal {
   font-family: var(--font-mono);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: var(--ink);
 }
 
 .sec-remove {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.7);
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   font-size: 0.8rem;
   line-height: 1;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
 }
 
 .sec-remove:hover:not(:disabled) {
@@ -537,12 +598,12 @@ main {
 
 /* Pricing type selector */
 .type-select {
-  padding: 4px 7px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: 10px;
   font-size: 0.78rem;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--ink);
   background: var(--panel);
   cursor: pointer;
   transition: border-color var(--transition), color var(--transition);
@@ -574,7 +635,7 @@ main {
 
 .item-name:focus {
   outline: none;
-  border-bottom: 1px dashed var(--amber);
+  border-bottom: 1px dashed var(--accent);
 }
 
 /* ---------- Fields ---------- */
@@ -591,30 +652,35 @@ main {
 }
 
 .field label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .field input {
-  padding: 7px 8px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.88rem;
   font-variant-numeric: tabular-nums;
   background: var(--panel);
+  color: var(--ink);
   transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+}
+
+.field input::placeholder {
+  color: var(--placeholder);
 }
 
 .field input:focus {
   outline: none;
-  border-color: var(--teak);
-  box-shadow: 0 0 0 2px rgba(44, 26, 14, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .field input:hover:not(:focus) {
-  border-color: #b8b2a6;
+  border-color: var(--hover-line);
 }
 
 /* ---------- Calculated Amount ---------- */
@@ -623,15 +689,15 @@ main {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: 0.95rem;
-  color: var(--teak);
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 700;
   min-height: 32px;
   line-height: 32px;
   transition: color var(--transition);
 }
 
 .calc-amount.overridden {
-  color: var(--amber);
+  color: var(--accent);
 }
 
 .calc-amount.imported {
@@ -666,7 +732,7 @@ main {
 }
 
 .override-toggle:hover {
-  color: var(--amber);
+  color: var(--accent);
 }
 
 .remove-btn {
@@ -682,65 +748,67 @@ main {
 }
 
 .remove-btn:hover {
-  color: #7d2d2d;
+  color: #dc2626;
 }
 
 /* ---------- Override Input ---------- */
 .override-input {
   width: 100%;
-  padding: 7px 8px;
-  border: 1px solid var(--amber);
-  border-radius: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
-  color: var(--amber);
+  color: var(--accent);
   text-align: right;
-  box-shadow: 0 0 0 2px rgba(196, 112, 42, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
   transition: box-shadow var(--transition);
 }
 
 .override-input:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(196, 112, 42, 0.2);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 /* ---------- Add Buttons ---------- */
 .add-item-btn {
   width: 100%;
-  padding: 8px;
-  background: var(--teak-tint);
+  padding: 12px;
+  background: transparent;
   border: none;
   border-top: 1px dashed var(--line);
-  color: var(--teak);
+  color: var(--muted);
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition), color var(--transition);
 }
 
 .add-item-btn:hover {
-  background: #e8e3da;
+  background: var(--teak-tint);
+  color: var(--ink);
 }
 
 .add-section-btn {
   display: block;
   width: 100%;
-  padding: 10px;
+  padding: 14px;
   background: var(--panel);
-  border: 1px dashed var(--muted);
+  border: 1px dashed var(--line);
   border-radius: var(--radius);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 600;
   cursor: pointer;
   margin-bottom: 20px;
   transition: border-color var(--transition), color var(--transition), background var(--transition);
 }
 
 .add-section-btn:hover {
-  border-color: var(--teak);
-  color: var(--teak);
-  background: var(--teak-tint);
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--panel);
 }
 
 /* ---------- Imported Label ---------- */
@@ -775,20 +843,21 @@ main {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--teak);
-  color: #fff;
+  background: var(--bar-bg);
+  color: var(--bar-fg);
   z-index: 10;
-  padding: 11px 20px;
+  padding: 14px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 -2px 12px rgba(26, 22, 18, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .grand-bar .label {
   font-size: 0.82rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.02em;
 }
 
 .grand-bar .value {
@@ -804,8 +873,8 @@ main {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 8px 12px;
-  margin-bottom: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -832,10 +901,10 @@ main {
 /* Button group */
 .btn-group {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   background: var(--teak-tint);
-  border-radius: 5px;
-  padding: 2px;
+  border-radius: 10px;
+  padding: 3px;
 }
 
 .view-btn,
@@ -871,7 +940,7 @@ main {
 .view-btn.active,
 .size-btn.active {
   background: var(--panel);
-  color: var(--teak);
+  color: var(--ink);
   font-weight: 600;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
@@ -924,7 +993,7 @@ main {
 }
 
 .compact-toggle input:checked + .compact-switch {
-  background: var(--teak);
+  background: var(--accent);
 }
 
 .compact-toggle input:checked + .compact-switch::after {
@@ -932,7 +1001,7 @@ main {
 }
 
 .compact-toggle input:focus-visible + .compact-switch {
-  outline: 2px solid var(--teak);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -1011,16 +1080,19 @@ body.compact .grand-bar .value {
 }
 
 body.compact header {
-  padding: 12px 16px 10px;
+  padding: 16px 16px 0;
+}
+
+body.compact .header-card {
+  padding: 16px 16px 14px;
 }
 
 body.compact .meta-grid {
-  gap: 5px;
-  padding: 6px;
+  gap: 10px;
 }
 
 body.compact .meta-grid input {
-  padding: 4px 6px;
+  padding: 8px 10px;
   font-size: 0.85em;
 }
 
@@ -1158,7 +1230,7 @@ body.compact .meta-grid input {
   background: transparent;
   color: var(--ink);
   padding: 0 0 8px;
-  border-bottom: 2px solid var(--teak);
+  border-bottom: 2px solid var(--ink);
 }
 
 .view-cards .section-head .sec-name {
@@ -1167,11 +1239,11 @@ body.compact .meta-grid input {
 }
 
 .view-cards .section-head .sec-name:focus {
-  border-bottom-color: var(--amber);
+  border-bottom-color: var(--accent);
 }
 
 .view-cards .section-head .stotal {
-  color: var(--teak);
+  color: var(--ink);
 }
 
 .view-cards .sec-remove {
@@ -1202,7 +1274,7 @@ body.compact .meta-grid input {
 }
 
 .view-cards .item:hover {
-  border-color: var(--teak-light);
+  border-color: var(--hover-line);
   box-shadow: var(--shadow-md);
 }
 
@@ -1221,11 +1293,11 @@ body.compact .meta-grid input {
   bottom: 72px;
   left: 50%;
   transform: translateX(-50%) translateY(10px);
-  background: var(--teak);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 0.82rem;
+  background: var(--bar-bg);
+  color: var(--bar-fg);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 0.84rem;
   font-weight: 500;
   box-shadow: var(--shadow-md);
   opacity: 0;
@@ -1241,106 +1313,43 @@ body.compact .meta-grid input {
 }
 
 /* ---------- Dark Mode Overrides ---------- */
-body.dark header {
-  background: #1a1410;
-}
-
-body.dark .field input,
-body.dark .type-select,
-body.dark .section-head .sec-name {
-  background: #1e1c18;
-  color: var(--ink);
-}
-
-body.dark .field input:focus {
-  background: #252218;
-}
-
-body.dark .btn {
-  background: #222018;
-}
-
-body.dark .btn:hover {
-  background: #2e2a20;
-}
-
-body.dark .btn-primary {
-  background: var(--teak);
-}
-
-body.dark .btn-primary:hover {
-  background: var(--teak-light);
-}
-
-body.dark .import-btn {
-  background: var(--amber-light);
-}
-
-body.dark .import-btn:hover {
-  background: #3a2a18;
-}
-
-body.dark .add-item-btn {
-  background: #1e1c18;
-}
-
-body.dark .add-item-btn:hover {
-  background: #2a2620;
-}
-
-body.dark .add-section-btn {
-  background: #1e1c18;
-}
-
-body.dark .empty-state {
-  background: #1e1c18;
-}
-
-body.dark .grand-bar {
-  background: #1a1410;
-}
-
-body.dark .grand-bar .label {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-body.dark .view-settings {
-  background: #1e1c18;
-}
-
-body.dark .btn-group {
-  background: #222018;
+body.dark .field input:focus,
+body.dark .meta-grid input:focus,
+body.dark .type-select:focus {
+  border-color: var(--accent);
 }
 
 body.dark .view-btn:hover,
 body.dark .size-btn:hover {
-  background: #2e2a20;
+  background: #3f3f46;
 }
 
 body.dark .view-btn.active,
 body.dark .size-btn.active {
-  background: var(--teak);
-  color: #fff;
-}
-
-body.dark .toast {
-  background: var(--teak);
-  color: #fff;
-}
-
-body.dark .legend span {
-  color: #666;
-}
-
-body.dark .field input::placeholder {
-  color: #555;
+  background: #3f3f46;
+  color: var(--ink);
+  box-shadow: none;
 }
 
 body.dark input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
+  filter: invert(0.85);
+}
+
+body.dark .btn-ghost:hover {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+body.dark .override-input {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
 /* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 560px) {
   .header-top {
     flex-direction: column;
@@ -1439,6 +1448,17 @@ body:not(.view-list) .dots {
 
   body {
     padding-bottom: 0;
+  }
+
+  header {
+    padding: 0;
+    max-width: none;
+  }
+
+  .header-card {
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
   }
 
   .section {
