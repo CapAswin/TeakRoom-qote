@@ -925,6 +925,143 @@ document.addEventListener('keydown', e => {
   }
 });
 
+/* ---------- Product catalog & room selection modal ---------- */
+const catalogState = { data: null };
+
+async function loadCatalog() {
+  try {
+    const res = await fetch('catalog.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    catalogState.data = await res.json();
+    buildRoomList();
+    return true;
+  } catch (e) {
+    console.warn('catalog.json unavailable:', e.message);
+    return false;
+  }
+}
+
+function buildRoomList() {
+  const list = $('#modalRoomList');
+  list.innerHTML = '';
+  (catalogState.data.categories || []).forEach(cat => {
+    const label = el('label', 'modal-room');
+    label.dataset.room = cat.room;
+    const box = el('input');
+    box.type = 'checkbox';
+    box.setAttribute('aria-label', 'Include ' + cat.room);
+    box.checked = !!cat.init_selection;
+    box.addEventListener('change', syncModalConfirm);
+    const name = el('span', 'modal-room-name');
+    name.textContent = cat.room;
+    const count = el('span', 'modal-room-count');
+    const n = (cat.products || []).length;
+    count.textContent = n + ' item' + (n === 1 ? '' : 's');
+    label.append(box, name, count);
+    list.appendChild(label);
+  });
+}
+
+function syncModalConfirm() {
+  const hasSelection = $$('#modalRoomList input[type="checkbox"]').some(cb => cb.checked);
+  $('#modalConfirm').disabled = !hasSelection;
+  $('#modalConfirm').title = hasSelection ? '' : 'Select at least one room';
+}
+
+function showRoomModal() {
+  syncModalConfirm();
+  $('#roomModal').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+}
+
+function hideRoomModal() {
+  $('#roomModal').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+}
+
+function selectedRoomNames() {
+  return $$('#modalRoomList .modal-room')
+    .filter(row => row.querySelector('input').checked)
+    .map(row => row.dataset.room);
+}
+
+function catalogSections(rooms) {
+  const selected = new Set(rooms);
+  return (catalogState.data.categories || [])
+    .filter(cat => selected.has(cat.room))
+    .map(cat => ({
+      name: cat.room,
+      items: (cat.products || []).map(p => ({
+        name: p.name,
+        type: 'quantity',
+        qty: p.qty || 1,
+        rate: p.default_rate || 0,
+        desc: p.specification || '',
+        override: null
+      }))
+    }));
+}
+
+$('#modalSelectAll').addEventListener('click', () => {
+  $$('#modalRoomList input[type="checkbox"]').forEach(cb => cb.checked = true);
+  syncModalConfirm();
+});
+
+$('#modalDeselectAll').addEventListener('click', () => {
+  $$('#modalRoomList input[type="checkbox"]').forEach(cb => cb.checked = false);
+  syncModalConfirm();
+});
+
+$('#modalConfirm').addEventListener('click', () => {
+  const rooms = selectedRoomNames();
+  if (rooms.length === 0) { showToast('No rooms selected'); return; }
+  const existing = new Set(data.map(sec => sec.name));
+  const incoming = catalogSections(rooms).filter(sec => !existing.has(sec.name));
+  if (incoming.length === 0) {
+    hideRoomModal();
+    showToast('Those rooms are already in this quote');
+    return;
+  }
+  const blankStarter = data.length === 1 && data[0].items.length === 0;
+  data = blankStarter ? incoming : data.concat(incoming);
+  step = data.length - 1;
+  hideRoomModal();
+  render();
+  persist(true);
+  showToast(incoming.length + ' room' + (incoming.length === 1 ? '' : 's') + ' added');
+});
+
+$('#modalStartFresh').addEventListener('click', () => {
+  data = emptyData();
+  meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
+  Object.keys(metaImported).forEach(k => metaImported[k] = false);
+  step = 0;
+  syncMetaInputs();
+  hideRoomModal();
+  render();
+  persist(true);
+  showToast('Started a fresh quote');
+});
+
+/* Close modal on backdrop click or Escape */
+$('#roomModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) hideRoomModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#roomModal').getAttribute('aria-hidden') === 'false') {
+    hideRoomModal();
+  }
+});
+
+/* Reopen the room picker from the toolbar to add catalog rooms */
+$('#roomModalBtn').addEventListener('click', () => {
+  if (!catalogState.data) {
+    loadCatalog().then(ok => { if (ok) showRoomModal(); else showToast('Catalog not available'); });
+    return;
+  }
+  showRoomModal();
+});
+
 /* ---------- Init ---------- */
 loadTheme();
 loadViewSettings();
@@ -932,3 +1069,11 @@ applyViewSettings();
 loadState();
 syncMetaInputs();
 render();
+
+/* First-run: if the quote has no items yet, offer rooms from the catalog. */
+loadCatalog().then(ok => {
+  if (!ok) return;
+  const noItems = !data.some(sec => sec.items.length > 0);
+  const noMeta = !(meta.qno || meta.client || meta.place);
+  if (noItems && noMeta) showRoomModal();
+});

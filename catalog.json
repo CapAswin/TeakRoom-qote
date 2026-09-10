@@ -1,0 +1,412 @@
+{
+  "meta": {
+    "name": "TeakRoom Interiors — Product Catalog",
+    "source_quote": "Nishant_May_6th.xlsx",
+    "currency": "INR",
+    "gst_default": 18
+  },
+  "categories": [
+    {
+      "room": "Foyer",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Shoerack",
+          "specification": "L-4 H 1.5 / Commercial Ply - Promate / Laminate Matt / Normal Close, Louvered vents for ventilation cost extra.",
+          "unit_type": "quantity",
+          "default_rate": 9000,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Cushion Top",
+          "specification": "4*1.5 Fabric Cushion",
+          "unit_type": "quantity",
+          "default_rate": 3300,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Living Room",
+      "init_selection": true,
+      "products": [
+        {
+          "name": "Panelling",
+          "specification": "L-6.5 H-4 / Commercial Ply - Promate / Laminate Matt",
+          "unit_type": "quantity",
+          "default_rate": 22100,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Ledges",
+          "specification": "L-2.5 D-1 / Commercial Ply - Promate / Laminate Matt",
+          "unit_type": "quantity",
+          "default_rate": 900,
+          "gst": 18,
+          "qty": 2
+        },
+        {
+          "name": "Base Unit",
+          "specification": "L-6.5 D-1.3 / Commercial Ply - Promate / Laminate Matt / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 12675,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Falseceiling",
+          "unit_type": "quantity",
+          "default_rate": 2784,
+          "gst": 18,
+          "qty": 2
+        },
+        {
+          "name": "Panel Lights",
+          "specification": "3Watts panel light Philips",
+          "unit_type": "quantity",
+          "default_rate": 625,
+          "gst": 0,
+          "qty": 3
+        }
+      ]
+    },
+    {
+      "room": "Dining",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Crockery Base Unit",
+          "specification": "L-4 H-3 / Commercial Ply - Promate / Laminate Matt / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 18000,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Wall Unit",
+          "specification": "L-4 H-2 / Commercial Ply - Promate / Laminate Hi Gloss / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 12640,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Master Bed Room",
+      "init_selection": true,
+      "products": [
+        {
+          "name": "Wardrobe Sliding + Channel",
+          "specification": "L-6 H-9 / Commercial Ply - Promate / Laminate Hi Gloss / Hettich Softclose. Including 2 Drawers. Loft, Mirror on shutter and Dressing Unit separate.",
+          "unit_type": "quantity",
+          "default_rate": 96000,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Base Unit (Dresser)",
+          "specification": "L-2 H-7 / Commercial Ply - Promate / Laminate Matt / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 21000,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Drawer",
+          "specification": "Drawer Soft Close (Hettich). Upto 3 feet width, With Telescopic channels.",
+          "unit_type": "quantity",
+          "default_rate": 2500,
+          "gst": 18,
+          "qty": 2
+        },
+        {
+          "name": "Mirror on Shutter",
+          "specification": "L-3 H-4.5 / Mirror on panel. Saint Gobain",
+          "unit_type": "quantity",
+          "default_rate": 3375,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Guest Bed Room",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Wardrobe Swing",
+          "specification": "L-6 H-7 / Commercial Ply - Promate / Laminate Matt / Normal Close. Including 2 Drawers. Loft, Mirror on shutter separate.",
+          "unit_type": "quantity",
+          "default_rate": 63000,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Loft",
+          "specification": "L-6 H-2 / Commercial Ply - Promate / Laminate Hi Gloss / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 12360,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Mirror On Shutter",
+          "specification": "L-2 H-7 / Mirror With Screws. Saint Gobain",
+          "unit_type": "quantity",
+          "default_rate": 6300,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Bathroom MBR",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Base Unit BWP",
+          "specification": "L-2 H-2 / BWP Promate Ply / Laminate Matt / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 7520,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Bathroom COMMON",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Base Unit BWP",
+          "specification": "L-1.6 H-2 / BWP Promate Ply / Laminate Matt / Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 6016,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Kitchen",
+      "init_selection": true,
+      "products": [
+        {
+          "name": "Base Unit BWP",
+          "specification": "L-10 H-2.8 / BWP Promate Ply / Laminate Hi Gloss / Hettich Softclose",
+          "unit_type": "quantity",
+          "default_rate": 56840,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Wall Unit",
+          "specification": "L-3.5 H-2 / Commercial Ply Promate / Laminate Hi Gloss / Hettich Softclose",
+          "unit_type": "quantity",
+          "default_rate": 11880,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Wall Unit (Microwave)",
+          "specification": "L-2 H-2.8 / Commercial Ply Promate / Laminate Hi Gloss / Hettich Softclose",
+          "unit_type": "quantity",
+          "default_rate": 9240,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Chimney Panel",
+          "specification": "L-2 H-2 / BWP Promate Ply / Laminate Hi Gloss",
+          "unit_type": "quantity",
+          "default_rate": 3720,
+          "qty": 1
+        },
+        {
+          "name": "Box Loft",
+          "specification": "L-5.5 H-2 / Commercial Ply - Promate / Laminate Hi Gloss / Hettich Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 17380,
+          "qty": 1
+        },
+        {
+          "name": "Loft",
+          "specification": "L-8 H-2 / Commercial Ply - Promate / Laminate Hi Gloss / Hettich Normal Close",
+          "unit_type": "quantity",
+          "default_rate": 18240,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Hob & Chimney",
+          "specification": "Approx",
+          "unit_type": "quantity",
+          "default_rate": 30000,
+          "qty": 1
+        },
+        {
+          "name": "Accessories - Tandem Box",
+          "unit_type": "quantity",
+          "default_rate": 4500,
+          "gst": 0,
+          "qty": 3
+        },
+        {
+          "name": "Accessories - Bottle Pull Out",
+          "specification": "9191708",
+          "unit_type": "quantity",
+          "default_rate": 3901,
+          "gst": 0,
+          "qty": 1
+        },
+        {
+          "name": "Accessories - Cutlery Tray",
+          "specification": "9194935",
+          "unit_type": "quantity",
+          "default_rate": 486,
+          "gst": 0,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Study",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Wardrobe Swing",
+          "specification": "L-4 H-7 / Commercial Ply - Promate / Laminate Matt / Soft Close. Including 2 Drawers.",
+          "unit_type": "quantity",
+          "default_rate": 43960,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Wall Unit",
+          "specification": "L-3 H-3 / Commercial Ply - Promate / Laminate Hi Gloss",
+          "unit_type": "quantity",
+          "default_rate": 14220,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Study Table (Fixed)",
+          "specification": "L-3 H-2.8 / Commercial Ply - Promate / Laminate Matt",
+          "unit_type": "quantity",
+          "default_rate": 13600,
+          "gst": 18,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Passage",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Wallpaper",
+          "unit_type": "quantity",
+          "default_rate": 4800,
+          "gst": 18,
+          "qty": 3
+        },
+        {
+          "name": "Falseceiling",
+          "unit_type": "quantity",
+          "default_rate": 840,
+          "gst": 18,
+          "qty": 1
+        },
+        {
+          "name": "Panel Lights",
+          "specification": "7 Watts panel light Philips",
+          "unit_type": "quantity",
+          "default_rate": 625,
+          "gst": 0,
+          "qty": 2
+        }
+      ]
+    },
+    {
+      "room": "Bathroom",
+      "init_selection": false,
+      "products": [
+        {
+          "name": "Shower Partition",
+          "specification": "Saint Gobain Glass partition",
+          "unit_type": "quantity",
+          "default_rate": 28000,
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "room": "Entire Home",
+      "init_selection": true,
+      "products": [
+        {
+          "name": "Miscellaneous",
+          "specification": "2BHK - Transportation, Delivery, Liftup, Installation, Debris clearing and House cleaning charges",
+          "unit_type": "quantity",
+          "default_rate": 17000,
+          "gst": 0,
+          "qty": 1
+        },
+        {
+          "name": "Electrical, Plumbing, Granite & Gas Piping",
+          "specification": "On Actuals",
+          "unit_type": "quantity",
+          "default_rate": 30000,
+          "qty": 1
+        },
+        {
+          "name": "Floor Guard",
+          "specification": "2BHK Floor Guard — protects apartment flooring during work",
+          "unit_type": "quantity",
+          "default_rate": 8000,
+          "gst": 0,
+          "qty": 1
+        }
+      ]
+    }
+  ],
+  "brands": {
+    "plywood": "Mikasa Ply (Greenlam) — IS 710, BWP Grade, E1 Emission Norms, 25-year marine warranty",
+    "hardware": ["Hettich", "Häfele"]
+  },
+  "reusable_text": {
+    "terms_and_conditions": [
+      "5 years warranty on woodwork provided by the manufacturer",
+      "10 years warranty on all hardware",
+      "3 years warranty on wallpapers",
+      "The final price includes 18% GST",
+      "The Grand Total Amount is inclusive of all taxes, design, customization, supervision, project management, transportation and installation"
+    ],
+    "material_specification": [
+      "BWP Ply for kitchen bottom cabinets and bathroom cabinets. 16mm thickness.",
+      "Ply (Commercial, anti-termite and borer proof) for wardrobes. 16mm thickness.",
+      "Laminates - Bloom / Merino / Associate. (Inside 0.8mm and outside 1mm)",
+      "Mirror - Saint Gobain",
+      "False ceiling POP - Gyproc by Saint Gobain",
+      "Hettich Hinges and Channels"
+    ],
+    "payment_structure": [
+      "10% — On Design and Customization Stage (Assign Personal Designer, Customize Design)",
+      "50% — On completion of design prior to start manufacturing (Order Raw Material and Manufacturing)",
+      "35% — Post dated cheque (one month later). Deposited after kitchens and wardrobe material reach site",
+      "5% — Post dated cheque (60 days later). Deposited after handover"
+    ],
+    "notes": [
+      "Chimney, Sink, Hob, Gas Piping, Granite is not included in the estimate and has to be borne by the client",
+      "Light fittings, Geyser, Bathroom fittings, Fans and any other electric device procurement & installation to be borne by the client",
+      "Any delays arising out of apartment/housing management regulations shall be considered in our timeline if not informed prior",
+      "Work in progress is always messy and is not final unless we say it is",
+      "The bill will be revised after you have selected laminate/veneer/ducco/wooden flooring of your choice",
+      "This estimation will be valid for 30 days"
+    ]
+  }
+}

@@ -66,6 +66,10 @@
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         History
       </button>
+      <button type="button" class="btn" id="roomModalBtn" title="Add rooms from the product catalog">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2a1 1 0 011 1v4l3.5 6.5a1 1 0 01-.9 1.5H4.4a1 1 0 01-.9-1.5L7 7V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Add Rooms
+      </button>
       <span class="toolbar-sep"></span>
       <label class="import-btn" title="Load a previously exported .xlsx file">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -146,6 +150,26 @@
     <div class="grand-bar-inner">
       <span class="label">Grand Total</span>
       <span class="value mono" id="grandTotal">₹0</span>
+    </div>
+  </div>
+
+  <!-- Room Selection Modal -->
+  <div class="modal-overlay" id="roomModal" aria-hidden="true" role="dialog" aria-label="Choose rooms for your quotation">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>Choose rooms</h2>
+        <p class="modal-sub">Select which areas to include. You can add or remove rooms later.</p>
+      </div>
+      <div class="modal-toolbar">
+        <button type="button" class="modal-link" id="modalSelectAll">Select all</button>
+        <span class="modal-sep">|</span>
+        <button type="button" class="modal-link" id="modalDeselectAll">Deselect all</button>
+      </div>
+      <div class="modal-list" id="modalRoomList"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="modalStartFresh">Start fresh</button>
+        <button type="button" class="btn btn-primary" id="modalConfirm">Start with selected</button>
+      </div>
     </div>
   </div>
 
