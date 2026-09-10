@@ -933,6 +933,7 @@ document.addEventListener('keydown', e => {
 /* ---------- Product catalog & room selection modal ---------- */
 const catalogState = { data: null };
 let modalInsertAt = null;
+let modalMode = null; // 'init' (first-run/new quote) or 'add' (add to existing quote)
 
 async function loadCatalog() {
   try {
@@ -963,7 +964,8 @@ function buildRoomList() {
     const count = el('span', 'modal-room-count');
     const n = (cat.products || []).length;
     count.textContent = n + ' item' + (n === 1 ? '' : 's');
-    label.append(box, name, count);
+    const tag = el('span', 'modal-room-tag');
+    label.append(box, name, count, tag);
     list.appendChild(label);
   });
 }
@@ -979,9 +981,23 @@ function resetRoomChecks(preselect) {
 }
 
 function syncModalConfirm() {
-  const hasSelection = $$('#modalRoomList input[type="checkbox"]').some(cb => cb.checked);
+  const boxes = $$('#modalRoomList input[type="checkbox"]');
+  const count = boxes.filter(cb => cb.checked && !cb.disabled).length;
+  const hasSelection = count > 0;
   $('#modalConfirm').disabled = !hasSelection;
   $('#modalConfirm').title = hasSelection ? '' : 'Select at least one room';
+  const cnt = $('#modalCount');
+  if (cnt) cnt.textContent = count + ' of ' + boxes.length + ' selected';
+}
+
+/* Pick a unique default name for a blank section, e.g. "NEW AREA", "NEW AREA 2", ... */
+function nextSectionName() {
+  const used = new Set(data.map(s => s.name));
+  if (!used.has('NEW AREA')) return 'NEW AREA';
+  for (let n = 2; ; n++) {
+    const cand = 'NEW AREA ' + n;
+    if (!used.has(cand)) return cand;
+  }
 }
 
 /* mode 'init' -> new quote, preselect rooms marked init_selection, insert at end.
@@ -995,21 +1011,69 @@ function openRoomModal(mode) {
     return;
   }
   const adding = mode === 'add';
+  modalMode = mode;
+
+  /* Clear per-row state carried over from a previous open. */
+  $$('#modalRoomList .modal-room').forEach(row => {
+    row.querySelector('input').disabled = false;
+    row.classList.remove('already-added');
+    const tag = row.querySelector('.modal-room-tag');
+    if (tag) tag.textContent = '';
+  });
   resetRoomChecks(!adding);
   modalInsertAt = adding && data.length ? step : null;
+
+  /* Mode-aware header + footer copy */
+  const overlay = $('#roomModal');
+  overlay.setAttribute('aria-label', adding ? 'Add rooms to your quotation' : 'Choose rooms for your quotation');
+  $('#modalTitle').textContent = adding ? 'Add rooms' : 'Choose rooms';
+  $('#modalSub').textContent = adding
+    ? 'Pick from the catalog, or add a new empty section. Selected rooms are inserted after the current section.'
+    : 'Select which areas to include, or start fresh with a brand-new empty section.';
+
+  const freshBtn = $('#modalStartFresh');
+  freshBtn.textContent = adding ? 'Add empty section' : 'Start fresh';
+  freshBtn.title = adding
+    ? 'Insert a blank section into this quote'
+    : 'Clear the current quote and start a brand-new empty one';
+
   $('#modalConfirm').textContent = adding ? 'Add selected' : 'Start with selected';
-  $('#roomModal').setAttribute('aria-hidden', 'false');
+
+  /* Only "add" mode can be dismissed; the initial picker must be resolved via a button. */
+  $('#modalClose').hidden = !adding;
+  const note = $('#modalNote');
+  note.hidden = adding;
+  note.textContent = adding
+    ? 'Rooms you already added are greyed out below.'
+    : 'This step cannot be skipped — pick at least one room, or press “Start fresh” to begin with an empty section.';
+  overlay.classList.toggle('modal-locked', !adding);
+
+  /* In add mode, rooms already in the quote are disabled and tagged. */
+  if (adding && data.length) {
+    const existing = new Set(data.map(sec => sec.name));
+    $$('#modalRoomList .modal-room').forEach(row => {
+      const taken = existing.has(row.dataset.room);
+      row.querySelector('input').disabled = taken;
+      row.classList.toggle('already-added', taken);
+      const tag = row.querySelector('.modal-room-tag');
+      if (tag) tag.textContent = taken ? 'Added' : '';
+    });
+  }
+
+  overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
+  syncModalConfirm();
 }
 
 function hideRoomModal() {
   $('#roomModal').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('modal-open');
+  modalMode = null;
 }
 
 function selectedRoomNames() {
   return $$('#modalRoomList .modal-room')
-    .filter(row => row.querySelector('input').checked)
+    .filter(row => row.querySelector('input').checked && !row.querySelector('input').disabled)
     .map(row => row.dataset.room);
 }
 
@@ -1031,7 +1095,7 @@ function catalogSections(rooms) {
 }
 
 $('#modalSelectAll').addEventListener('click', () => {
-  $$('#modalRoomList input[type="checkbox"]').forEach(cb => cb.checked = true);
+  $$('#modalRoomList input[type="checkbox"]').forEach(cb => { if (!cb.disabled) cb.checked = true; });
   syncModalConfirm();
 });
 
@@ -1066,6 +1130,23 @@ $('#modalConfirm').addEventListener('click', () => {
 });
 
 $('#modalStartFresh').addEventListener('click', () => {
+  const isAdd = modalMode === 'add';
+
+  if (isAdd) {
+    /* In add mode, "start fresh" means inserting a new blank section (never wiping the quote). */
+    const sec = { name: nextSectionName(), items: [] };
+    const idx = (modalInsertAt == null) ? data.length : modalInsertAt + 1;
+    data.splice(idx, 0, sec);
+    step = idx;
+    pendingFocus = { sel: '[data-sec="' + idx + '"] .sec-name', select: true };
+    hideRoomModal();
+    render();
+    persist();
+    showToast('Empty section added');
+    return;
+  }
+
+  /* Init mode — skip the catalog and begin a brand-new empty quote. */
   data = emptyData();
   meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
   Object.keys(metaImported).forEach(k => metaImported[k] = false);
@@ -1077,12 +1158,19 @@ $('#modalStartFresh').addEventListener('click', () => {
   showToast('Started a fresh quote');
 });
 
-/* Close modal on backdrop click or Escape */
+/* Close icon — only reachable in add mode (hidden in the initial picker). */
+$('#modalClose').addEventListener('click', () => {
+  if (modalMode === 'init') return; // safety: the initial picker cannot be dismissed
+  hideRoomModal();
+});
+
+/* Close modal on backdrop click — allowed only in add mode. */
 $('#roomModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) hideRoomModal();
+  if (e.target !== e.currentTarget) return;
+  if (modalMode !== 'init') hideRoomModal();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && $('#roomModal').getAttribute('aria-hidden') === 'false') {
+  if (e.key === 'Escape' && $('#roomModal').getAttribute('aria-hidden') === 'false' && modalMode !== 'init') {
     hideRoomModal();
   }
 });
