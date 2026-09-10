@@ -1,0 +1,937 @@
+'use strict';
+
+/* ===========================================
+   TeakRoom Quotation Editor — App Logic
+   =========================================== */
+
+/* ---------- Helpers ---------- */
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+const el = (tag, cls) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  return node;
+};
+
+const num = v => {
+  const n = parseFloat(String(v == null ? '' : v).replace(/[₹,\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+};
+
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+
+const fmtNum = v => {
+  const n = num(v);
+  return n % 1 === 0
+    ? n.toLocaleString('en-IN')
+    : n.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+};
+
+const isOverride = it => it.override !== undefined && it.override !== null && it.override !== '';
+
+const SAVE_KEY = 'teakroom-quote.v1';
+
+/* ---------- Toast ---------- */
+function showToast(msg, duration = 2500) {
+  let toast = $('.toast');
+  if (!toast) {
+    toast = el('div', 'toast');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+/* ---------- Model ---------- */
+const emptyData = () => [{ name: 'ROOM 1', items: [] }];
+
+const todayISO = () => {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+};
+
+let data = emptyData();
+let step = 0;
+let pendingFocus = null;
+
+const meta = { qno: '', client: '', place: '', validtill: todayISO() };
+let metaImported = { qno: false, client: false, place: false, validtill: false };
+
+/* Migration: converts a stored item into the current model.
+   Old formats: { type:'area_rate', area, rate } and { type:'lumpsum', amount }. */
+function normalizeItem(it) {
+  const base = {
+    name: it.name || '',
+    override: it.override == null ? null : it.override,
+    importedFields: {}
+  };
+  switch (it.type) {
+    case 'area_rate':
+      return { ...base, type: 'area', length: it.area || 0, height: it.height || 1, rate: it.rate || 0 };
+    case 'lumpsum':
+      return { ...base, type: 'fixed', amount: it.amount || 0 };
+    case 'area':
+      return { ...base, type: 'area', length: it.length || 0, height: it.height || 0, rate: it.rate || 0 };
+    case 'running':
+      return { ...base, type: 'running', length: it.length || 0, rate: it.rate || 0 };
+    case 'quantity':
+      return { ...base, type: 'quantity', qty: it.qty || 0, rate: it.rate || 0 };
+    case 'fixed':
+      return { ...base, type: 'fixed', amount: it.amount || 0 };
+    default:
+      return { ...base, type: 'area', length: 0, height: 0, rate: 0 };
+  }
+}
+
+/* ---------- Persistence ---------- */
+function setSaveStatus(state) {
+  const dot = $('#saveDot');
+  const text = $('#saveText');
+  dot.classList.remove('saved', 'error');
+  if (state === 'saving') {
+    text.textContent = 'Saving…';
+  } else if (state === 'saved') {
+    text.textContent = 'Saved ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    dot.classList.add('saved');
+  } else {
+    text.textContent = 'Autosave unavailable';
+    dot.classList.add('error');
+  }
+}
+
+let saveTimer = null;
+function persist(immediate) {
+  clearTimeout(saveTimer);
+  const write = () => {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ meta, data, step, metaImported }));
+      setSaveStatus('saved');
+    } catch (e) {
+      setSaveStatus('error');
+    }
+  };
+  if (immediate) { write(); return; }
+  setSaveStatus('saving');
+  saveTimer = setTimeout(write, 400);
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s || !Array.isArray(s.data)) return;
+    data = s.data.map(sec => ({
+      name: sec.name || '',
+      items: (sec.items || []).map(normalizeItem)
+    }));
+    Object.assign(meta, s.meta || {});
+    Object.assign(metaImported, s.metaImported || {});
+    step = Math.max(0, Math.min(s.step || 0, data.length - 1));
+    setSaveStatus('saved');
+  } catch (e) {
+    /* corrupt saved state — start empty */
+  }
+}
+
+/* ---------- History ---------- */
+const HISTORY_KEY = 'teakroom-history.v1';
+const MAX_HISTORY = 50;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+
+function writeHistory(arr) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); }
+  catch { /* quota exceeded — silently drop */ }
+}
+
+function saveToHistory() {
+  const hasItems = data.some(s => s.items.length > 0);
+  const hasMeta = meta.qno || meta.client || meta.place;
+  if (!hasItems && !hasMeta) return;
+  const history = loadHistory();
+  history.unshift({
+    id: Date.now(),
+    meta: { ...meta },
+    data: JSON.parse(JSON.stringify(data)),
+    savedAt: new Date().toISOString()
+  });
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+  writeHistory(history);
+}
+
+/* ---------- Theme ---------- */
+const THEME_KEY = 'teakroom-theme.v1';
+
+function applyTheme(dark) {
+  document.body.classList.toggle('dark', dark);
+}
+
+function toggleTheme() {
+  const isDark = document.body.classList.contains('dark');
+  applyTheme(!isDark);
+  try { localStorage.setItem(THEME_KEY, isDark ? 'light' : 'dark'); }
+  catch { /* ignore */ }
+}
+
+function loadTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark') applyTheme(true);
+    else if (saved === 'light') applyTheme(false);
+    else applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  } catch { /* ignore */ }
+}
+
+/* ---------- Pricing engine ----------
+   Every line item fits one of four formulas:
+
+     Area     amount = length × height × rate
+     Running  amount = length × rate            (running feet)
+     Quantity amount = qty × rate               (unit price)
+     Fixed    amount = amount                   (lump sum)
+
+   Rates are plain editable inputs — users set them per item.
+----------------------------------------------------------------- */
+const areaOf = item =>
+  item.type === 'area' ? num(item.length) * num(item.height) : 0;
+
+const computeAmount = item => {
+  if (isOverride(item)) return num(item.override);
+  switch (item.type) {
+    case 'area':     return areaOf(item) * num(item.rate);
+    case 'running':  return num(item.length) * num(item.rate);
+    case 'quantity': return num(item.qty) * num(item.rate);
+    case 'fixed':    return num(item.amount);
+    default:         return 0;
+  }
+};
+
+const noteText = (item, amt) => {
+  if (isOverride(item)) return 'Manually overridden — click "Reset to formula" to recalculate.';
+  switch (item.type) {
+    case 'area': {
+      const a = areaOf(item);
+      return fmtNum(item.length) + ' × ' + fmtNum(item.height) + ' = ' + fmtNum(a) +
+        ' sqft · ' + fmtNum(a) + ' sqft × ₹' + fmtNum(item.rate) + ' = ' + fmt(amt);
+    }
+    case 'running':  return fmtNum(item.length) + ' Rft × ₹' + fmtNum(item.rate) + ' = ' + fmt(amt);
+    case 'quantity': return fmtNum(item.qty) + ' × ₹' + fmtNum(item.rate) + ' = ' + fmt(amt);
+    case 'fixed':    return 'Fixed price — enter the amount directly.';
+    default:         return '';
+  }
+};
+
+/* ---------- Amount cell + override ---------- */
+const itemRowSel = (s, i) => `[data-sec="${s}"][data-item="${i}"]`;
+
+function refreshAmountCell(sIdx, iIdx) {
+  const wrap = $(itemRowSel(sIdx, iIdx) + ' .calc-amount-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const item = data[sIdx].items[iIdx];
+  const display = el('div', 'calc-amount');
+  display.textContent = fmt(computeAmount(item));
+  if (isOverride(item)) display.classList.add('overridden');
+  wrap.appendChild(display);
+}
+
+function openOverride(sIdx, iIdx) {
+  const item = data[sIdx].items[iIdx];
+  const wrap = $(itemRowSel(sIdx, iIdx) + ' .calc-amount-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const input = el('input', 'override-input');
+  input.type = 'number';
+  input.step = 'any';
+  input.inputmode = 'decimal';
+  input.placeholder = '0';
+  input.setAttribute('aria-label', 'Manual amount for ' + item.name);
+  input.value = isOverride(item) ? item.override : Math.round(computeAmount(item));
+  let cancelled = false;
+  const commit = () => {
+    if (cancelled) return;
+    if (input.value !== '') item.override = num(input.value);
+    refreshAmountCell(sIdx, iIdx);
+    updateTotals();
+    persist();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commit();
+    else if (e.key === 'Escape') { cancelled = true; refreshAmountCell(sIdx, iIdx); }
+  });
+  input.addEventListener('blur', commit);
+  wrap.appendChild(input);
+  input.focus();
+  input.select();
+}
+
+/* ---------- Item field helpers ---------- */
+const PRICING_TYPES = [
+  ['area', 'Area · Length × Height'],
+  ['running', 'Running feet'],
+  ['quantity', 'Quantity'],
+  ['fixed', 'Fixed price']
+];
+
+/* A labelled number input bound to an item key (e.g. 'length'). */
+function makeField(item, label, key, impKey, onCommit) {
+  const imp = item.importedFields || {};
+  const f = el('div', 'field');
+  const l = el('label');
+  l.textContent = label;
+  const input = el('input', imp[impKey] ? ' imported' : '');
+  input.type = 'number';
+  input.step = 'any';
+  input.inputmode = 'decimal';
+  input.value = item[key] ?? 0;
+  input.addEventListener('input', () => {
+    item[key] = num(input.value);
+    if (imp[impKey]) { imp[impKey] = false; input.classList.remove('imported'); }
+    updateTotals();
+    persist();
+    if (onCommit) onCommit();
+  });
+  f.append(l, input);
+  return f;
+}
+
+/* The read-only "Amount" cell shown for formula-based items. */
+function makeAmountCell(item) {
+  const imp = item.importedFields || {};
+  const f = el('div', 'field amount-cell');
+  const l = el('label');
+  l.textContent = 'Amount';
+  const wrap = el('div', 'calc-amount-wrap');
+  const display = el('div', 'calc-amount');
+  display.textContent = fmt(computeAmount(item));
+  if (isOverride(item)) display.classList.add('overridden');
+  if (!isOverride(item) && imp.rate) display.classList.add('imported');
+  wrap.appendChild(display);
+  f.append(l, wrap);
+  return f;
+}
+
+/* The editable "Amount" cell used by Fixed-price items. */
+function makeFixedAmountCell(item) {
+  const imp = item.importedFields || {};
+  const f = el('div', 'field amount-cell');
+  const l = el('label');
+  l.textContent = 'Amount (₹)';
+  const input = el('input', imp.amount ? ' imported' : '');
+  input.type = 'number';
+  input.step = 'any';
+  input.inputmode = 'decimal';
+  input.value = item.amount ?? 0;
+  input.setAttribute('aria-label', 'Fixed amount');
+  input.addEventListener('input', () => {
+    item.amount = num(input.value);
+    if (imp.amount) { imp.amount = false; input.classList.remove('imported'); }
+    updateTotals();
+    persist();
+  });
+  f.append(l, input);
+  return f;
+}
+
+/* Rebuild the input fields inside an item based on its pricing type. */
+function renderItemFields(item, fieldRow, buildNote) {
+  fieldRow.innerHTML = '';
+  if (item.type === 'area') {
+    fieldRow.append(
+      makeField(item, 'Length (ft)', 'length', 'length'),
+      makeField(item, 'Height (ft)', 'height', 'height'),
+      makeField(item, 'Rate (₹ / sqft)', 'rate', 'rate'),
+      makeAmountCell(item)
+    );
+  } else if (item.type === 'running') {
+    fieldRow.append(
+      makeField(item, 'Length (Rft)', 'length', 'length'),
+      makeField(item, 'Rate (₹ / Rft)', 'rate', 'rate'),
+      makeAmountCell(item)
+    );
+  } else if (item.type === 'quantity') {
+    fieldRow.append(
+      makeField(item, 'Quantity', 'qty', 'qty'),
+      makeField(item, 'Rate (₹ / each)', 'rate', 'rate'),
+      makeAmountCell(item)
+    );
+  } else {
+    fieldRow.append(makeFixedAmountCell(item));
+  }
+  if (buildNote) buildNote();
+}
+
+/* ---------- Item builder ---------- */
+function buildItem(sec, item, sIdx, iIdx) {
+  const row = el('div', 'item');
+  row.dataset.sec = sIdx;
+  row.dataset.item = iIdx;
+  const imp = (item.importedFields = item.importedFields || {});
+
+  /* Note — lives above the actions for area/running/quantity items. */
+  const note = el('div', 'calc-note');
+
+  const updateNote = () => {
+    const amt = computeAmount(item);
+    note.textContent = noteText(item, amt);
+  };
+
+  /* name row + pricing type select */
+  const nameRow = el('div', 'item-name-row');
+  const nameInput = el('input', 'item-name' + (imp.name ? ' imported' : ''));
+  nameInput.value = item.name;
+  nameInput.placeholder = 'Item name';
+  nameInput.setAttribute('aria-label', 'Item name');
+  nameInput.addEventListener('input', () => {
+    item.name = nameInput.value;
+    if (imp.name) { imp.name = false; nameInput.classList.remove('imported'); }
+    persist();
+  });
+
+  const typeSelect = el('select', 'type-select no-print');
+  typeSelect.setAttribute('aria-label', 'Pricing type');
+  typeSelect.title = 'How this item is priced';
+  PRICING_TYPES.forEach(([v, label]) => {
+    const opt = el('option');
+    opt.value = v;
+    opt.textContent = label;
+    typeSelect.appendChild(opt);
+  });
+  typeSelect.value = item.type || 'area';
+  typeSelect.addEventListener('change', () => {
+    item.type = typeSelect.value;
+    item.override = null; /* changing the formula clears a manual override */
+    if (imp.type) { imp.type = false; typeSelect.classList.remove('imported'); }
+    renderItemFields(item, fieldRow, updateNote);
+    refreshAmountCellIfNeeded(row);
+    updateTotals();
+    persist();
+    showToast('Pricing: ' + PRICING_TYPES.find(p => p[0] === item.type)[1]);
+  });
+
+  nameRow.append(nameInput, typeSelect);
+  row.appendChild(nameRow);
+
+  /* dynamic input fields */
+  const fieldRow = el('div', 'field-row');
+  row.appendChild(fieldRow);
+  renderItemFields(item, fieldRow, updateNote);
+
+  /* For fixed items the amount is typed directly, so no formula note. */
+  if (item.type !== 'fixed') row.appendChild(note);
+
+  /* actions */
+  const removeBtn = el('button', 'remove-btn');
+  removeBtn.type = 'button';
+  removeBtn.textContent = 'Remove';
+  removeBtn.addEventListener('click', () => {
+    sec.items.splice(iIdx, 1);
+    render();
+    persist();
+    showToast('Item removed');
+  });
+
+  const actions = el('div', 'item-actions no-print');
+  if (item.type !== 'fixed') {
+    const toggle = el('button', 'override-toggle');
+    toggle.type = 'button';
+    const syncToggle = () => { toggle.textContent = isOverride(item) ? 'Reset to formula' : 'Override amount'; };
+    syncToggle();
+    toggle.addEventListener('click', () => {
+      if (isOverride(item)) {
+        item.override = null;
+        refreshAmountCell(sIdx, iIdx);
+        syncToggle();
+        updateTotals();
+        persist();
+        showToast('Reset to formula');
+      } else {
+        openOverride(sIdx, iIdx);
+      }
+    });
+    actions.append(toggle, removeBtn);
+  } else {
+    actions.append(el('span'), removeBtn);
+  }
+  row.appendChild(actions);
+
+  return row;
+}
+
+/* If the amount cell still holds a stale override input, rebuild it. */
+function refreshAmountCellIfNeeded(row) {
+  const wrap = row.querySelector('.calc-amount-wrap');
+  if (!wrap) return;
+  if (!row.querySelector('.calc-amount')) {
+    const display = el('div', 'calc-amount');
+    display.textContent = fmt(computeAmountFromRow(row));
+    wrap.innerHTML = '';
+    wrap.appendChild(display);
+  }
+}
+
+function computeAmountFromRow(row) {
+  const sIdx = row.dataset.sec;
+  const iIdx = row.dataset.item;
+  if (sIdx == null || iIdx == null || !data[sIdx]) return 0;
+  return computeAmount(data[sIdx].items[iIdx]);
+}
+
+/* ---------- Section builder ---------- */
+function buildSection(sec, sIdx) {
+  const secEl = el('section', 'section');
+  secEl.dataset.sec = sIdx;
+
+  const head = el('div', 'section-head');
+  const nameInput = el('input', 'sec-name');
+  nameInput.value = sec.name;
+  nameInput.setAttribute('aria-label', 'Section name');
+  nameInput.addEventListener('input', () => { sec.name = nameInput.value; updateChrome(); persist(); });
+
+  const total = el('span', 'stotal');
+  total.setAttribute('aria-label', 'Section total');
+
+  const rm = el('button', 'sec-remove no-print');
+  rm.type = 'button';
+  rm.textContent = '\u2715';
+  rm.title = 'Remove section';
+  rm.setAttribute('aria-label', 'Remove section');
+  rm.disabled = data.length < 2;
+  rm.addEventListener('click', () => {
+    if (!confirm('Remove the "' + sec.name + '" section and all of its items?')) return;
+    data.splice(sIdx, 1);
+    step = Math.max(0, Math.min(step, data.length - 1));
+    render();
+    persist();
+    showToast('Section removed');
+  });
+
+  head.append(nameInput, total, rm);
+  secEl.appendChild(head);
+
+  /* Wrap items in a container for grid/cards views */
+  const itemsContainer = el('div', 'items-container');
+  sec.items.forEach((item, iIdx) => itemsContainer.appendChild(buildItem(sec, item, sIdx, iIdx)));
+  secEl.appendChild(itemsContainer);
+
+  const add = el('button', 'add-item-btn no-print');
+  add.type = 'button';
+  add.textContent = '+ Add item to ' + sec.name;
+  add.addEventListener('click', () => {
+    sec.items.push({ name: 'NEW ITEM', type: 'area', length: 0, height: 0, rate: 0 });
+    pendingFocus = { sel: itemRowSel(sIdx, sec.items.length - 1) + ' .item-name', select: true };
+    render();
+    persist();
+    showToast('Item added');
+  });
+  secEl.appendChild(add);
+  return secEl;
+}
+
+/* ---------- Totals & Chrome ---------- */
+function updateTotals() {
+  let grand = 0;
+  data.forEach((sec, sIdx) => {
+    let sectionTotal = 0;
+    sec.items.forEach((item, iIdx) => {
+      const amt = computeAmount(item);
+      sectionTotal += amt;
+      const row = $(itemRowSel(sIdx, iIdx));
+      if (!row) return;
+      const display = row.querySelector('.calc-amount');
+      if (display) {
+        display.textContent = fmt(amt);
+        display.classList.toggle('overridden', isOverride(item));
+        const imp = item.importedFields || {};
+        display.classList.toggle('imported', !isOverride(item) && (imp.rate || imp.length || imp.height || imp.qty));
+      }
+      const note = row.querySelector('.calc-note');
+      if (note) note.textContent = noteText(item, amt);
+    });
+    const stEl = $(`[data-sec="${sIdx}"] .stotal`);
+    if (stEl) stEl.textContent = fmt(sectionTotal);
+    grand += sectionTotal;
+  });
+  $('#grandTotal').textContent = fmt(grand);
+}
+
+function updateChrome() {
+  const n = data.length;
+  step = Math.max(0, Math.min(step, n ? n - 1 : 0));
+  $('#stepLabel').textContent = n === 0 ? 'No sections yet' : 'Section ' + (step + 1) + ' of ' + n + ' \u2014 ' + data[step].name;
+  $('#prevBtn').disabled = (n === 0 || step === 0);
+  $('#nextBtn').disabled = (n === 0 || step >= n - 1);
+
+  const dots = $('#dots');
+  dots.innerHTML = '';
+  data.forEach((sec, i) => {
+    const d = el('button', 'dot');
+    d.type = 'button';
+    d.title = 'Go to ' + sec.name;
+    d.setAttribute('aria-label', 'Go to section ' + (i + 1) + ': ' + sec.name);
+    if (i === step) { d.classList.add('active'); d.setAttribute('aria-current', 'true'); }
+    d.addEventListener('click', () => { if (i !== step) { step = i; render(); } });
+    dots.appendChild(d);
+  });
+}
+
+/* ---------- Render ---------- */
+function render() {
+  const sectionsEl = $('#sections');
+  const viewMode = viewSettings.viewMode;
+
+  if (data.length === 0) {
+    const empty = el('div', 'empty-state');
+    const h3 = el('h3');
+    h3.textContent = 'No sections yet';
+    const hint = el('div', 'empty-hint');
+    hint.textContent = 'Start a new quote — add a section below, or import a previous Excel file.';
+    empty.append(h3, hint);
+    sectionsEl.innerHTML = '';
+    sectionsEl.appendChild(empty);
+    $('#grandTotal').textContent = fmt(0);
+    updateChrome();
+    return;
+  }
+
+  const content = document.createDocumentFragment();
+  data.forEach((sec, sIdx) => {
+    const secEl = buildSection(sec, sIdx);
+    /* In list view, hide non-active sections; in other views, show all */
+    if (viewMode === 'list') {
+      secEl.dataset.hidden = (sIdx === step) ? 'false' : 'true';
+    } else {
+      secEl.dataset.hidden = 'false';
+    }
+    content.appendChild(secEl);
+  });
+  sectionsEl.innerHTML = '';
+  sectionsEl.appendChild(content);
+
+  updateTotals();
+  updateChrome();
+
+  if (pendingFocus) {
+    const target = $(pendingFocus.sel);
+    if (target) { target.focus(); if (pendingFocus.select) target.select(); }
+    pendingFocus = null;
+  }
+}
+
+/* ---------- Meta wiring ---------- */
+['qno', 'client', 'place', 'validtill'].forEach(id => {
+  const input = $('#' + id);
+  const onChange = () => {
+    meta[id] = input.value;
+    if (metaImported[id]) { metaImported[id] = false; input.classList.remove('imported'); }
+    persist();
+  };
+  input.addEventListener('input', onChange);
+  input.addEventListener('change', onChange);
+});
+
+function applyMetaImportedClasses() {
+  Object.keys(metaImported).forEach(id => {
+    $('#' + id).classList.toggle('imported', !!metaImported[id]);
+  });
+}
+
+function syncMetaInputs() {
+  ['qno', 'client', 'place', 'validtill'].forEach(id => { $('#' + id).value = meta[id]; });
+  applyMetaImportedClasses();
+}
+
+/* ---------- Navigation ---------- */
+const gotoStep = i => { step = Math.max(0, Math.min(i, data.length - 1)); render(); };
+$('#prevBtn').addEventListener('click', () => gotoStep(step - 1));
+$('#nextBtn').addEventListener('click', () => gotoStep(step + 1));
+
+$('#addSectionBtn').addEventListener('click', () => {
+  const idx = data.push({ name: 'NEW AREA', items: [] }) - 1;
+  step = idx;
+  pendingFocus = { sel: `[data-sec="${idx}"] .sec-name`, select: true };
+  render();
+  persist();
+  showToast('Section added');
+});
+
+/* ---------- Excel import ---------- */
+const EXPORT_HEADER = ['Description', 'Pricing', 'Length', 'Height', 'Qty', 'Rate', 'Amount'];
+
+function parseWorkbookIntoData(wb) {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  const out = [];
+  let cur = null;
+  /* 'new' = 7-column format (this app's exports); 'old' = legacy 4-column */
+  let format = 'old';
+
+  rows.forEach(row => {
+    const c0 = String(row[0] == null ? '' : row[0]).trim();
+    const c1 = String(row[1] == null ? '' : row[1]).trim();
+    const c2 = String(row[2] == null ? '' : row[2]).trim();
+    const c3 = String(row[3] == null ? '' : row[3]).trim();
+    const c4 = String(row[4] == null ? '' : row[4]).trim();
+    const c5 = String(row[5] == null ? '' : row[5]).trim();
+    const c6 = String(row[6] == null ? '' : row[6]).trim();
+    if (!c0) return;
+
+    const lc = c0.toLowerCase();
+    if (lc.startsWith('quotation no')) { meta.qno = c1; metaImported.qno = true; return; }
+    if (lc === 'client') { meta.client = c1; metaImported.client = true; return; }
+    if (lc === 'place') { meta.place = c1; metaImported.place = true; return; }
+    if (lc.startsWith('quote valid')) { meta.validtill = c1; metaImported.validtill = true; return; }
+    if (c0 === EXPORT_HEADER[0] && c1 === EXPORT_HEADER[1]) { format = 'new'; return; }
+    if (lc === 'total' || lc === 'grand total') return;
+
+    /* A row with only column A filled is a section header */
+    if (!c1) { cur = { name: c0.toUpperCase(), items: [] }; out.push(cur); return; }
+    if (!cur) { cur = { name: 'IMPORTED ITEMS', items: [] }; out.push(cur); }
+
+    const addItem = item => {
+      item.importedFields = { name: true };
+      Object.keys(item).forEach(k => {
+        if (k !== 'name' && k !== 'type') item.importedFields[k] = true;
+      });
+      cur.items.push(item);
+    };
+
+    if (format === 'new') {
+      const type = c1.toLowerCase();
+      if (type.includes('area')) {
+        addItem({ name: c0, type: 'area', length: num(c2), height: num(c3), rate: num(c5) });
+      } else if (type.includes('run')) {
+        addItem({ name: c0, type: 'running', length: num(c2), rate: num(c5) });
+      } else if (type.includes('quant') || type.includes('qty')) {
+        addItem({ name: c0, type: 'quantity', qty: num(c4), rate: num(c5) });
+      } else {
+        addItem({ name: c0, type: 'fixed', amount: num(c6) });
+      }
+      return;
+    }
+
+    /* Legacy format: {'lumpsum' marker} or {area, rate} */
+    if (c1.toLowerCase() === 'lumpsum') {
+      addItem({ name: c0, type: 'fixed', amount: num(c3) });
+    } else {
+      addItem({ name: c0, type: 'area', length: num(c1), height: 1, rate: num(c2) });
+    }
+  });
+
+  return out;
+}
+
+$('#importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+      const parsed = parseWorkbookIntoData(wb);
+      if (parsed.length === 0) { showToast('No recognizable quotation rows found'); return; }
+      data = parsed;
+      step = 0;
+      syncMetaInputs();
+      render();
+      persist(true);
+      showToast('Imported ' + file.name);
+    } catch (err) {
+      showToast('Import failed: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
+
+/* ---------- Excel / PDF export ---------- */
+function itemToRow(item) {
+  const amt = computeAmount(item);
+  switch (item.type) {
+    case 'area':
+      return [item.name, 'Area (sqft)', item.length, item.height, '', item.rate, amt];
+    case 'running':
+      return [item.name, 'Running (rft)', item.length, '', '', item.rate, amt];
+    case 'quantity':
+      return [item.name, 'Quantity', '', '', item.qty, item.rate, amt];
+    case 'fixed':
+    default:
+      return [item.name, 'Fixed', '', '', '', '', item.amount];
+  }
+}
+
+function exportExcel() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const rows = [
+      ['Quotation No.', meta.qno],
+      ['Client', meta.client],
+      ['Place', meta.place],
+      ['Quote Valid Till', meta.validtill],
+      [],
+      EXPORT_HEADER
+    ];
+    let grand = 0;
+    data.forEach(sec => {
+      rows.push([sec.name]);
+      let sectionTotal = 0;
+      sec.items.forEach(item => {
+        const amt = computeAmount(item);
+        sectionTotal += amt;
+        rows.push(itemToRow(item));
+      });
+      rows.push(['TOTAL', '', '', '', '', '', sectionTotal]);
+      rows.push([]);
+      grand += sectionTotal;
+    });
+    rows.push(['GRAND TOTAL', '', '', '', '', '', grand]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 36 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Quotation');
+    XLSX.writeFile(wb, (meta.qno || 'quotation').replace(/[/\\]/g, '-') + '.xlsx');
+    showToast('Excel exported successfully');
+  } catch (err) {
+    showToast('Excel export failed: ' + err.message);
+  }
+}
+
+function exportPdf() {
+  const sections = $$('.section');
+  sections.forEach(s => s.dataset.hidden = 'false');
+  window.print();
+  render();
+}
+
+$('#exportExcelBtn').addEventListener('click', exportExcel);
+$('#exportPdfBtn').addEventListener('click', exportPdf);
+
+/* ---------- Reset ---------- */
+$('#resetBtn').addEventListener('click', () => {
+  if (!confirm('Save current quote to history and start fresh?')) return;
+  saveToHistory();
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
+  Object.keys(metaImported).forEach(k => metaImported[k] = false);
+  data = emptyData();
+  step = 0;
+  syncMetaInputs();
+  render();
+  persist(true);
+  showToast('Saved to history — starting fresh');
+});
+
+$('#saveQuoteBtn').addEventListener('click', () => {
+  saveToHistory();
+  showToast('Quote saved to history');
+});
+
+$('#historyBtn').addEventListener('click', () => {
+  window.open('history.html', '_blank');
+});
+
+$('#themeToggle').addEventListener('click', toggleTheme);
+
+/* ---------- View Settings ---------- */
+const VIEW_KEY = 'teakroom-view.v1';
+
+const viewSettings = {
+  viewMode: 'list',
+  fontSize: 'default',
+  compact: false
+};
+
+function loadViewSettings() {
+  try {
+    const raw = localStorage.getItem(VIEW_KEY);
+    if (raw) Object.assign(viewSettings, JSON.parse(raw));
+  } catch (e) { /* ignore */ }
+}
+
+function saveViewSettings() {
+  try {
+    localStorage.setItem(VIEW_KEY, JSON.stringify(viewSettings));
+  } catch (e) { /* ignore */ }
+}
+
+function applyViewSettings() {
+  const { viewMode, fontSize, compact } = viewSettings;
+
+  /* font size */
+  document.body.dataset.font = fontSize;
+  $$('.size-btn').forEach(btn => {
+    const active = btn.dataset.size === fontSize;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active);
+  });
+
+  /* compact */
+  document.body.classList.toggle('compact', compact);
+  const compactToggle = $('#compactToggle');
+  if (compactToggle) compactToggle.checked = compact;
+
+  /* view mode */
+  document.body.classList.remove('view-list', 'view-grid', 'view-table', 'view-cards');
+  document.body.classList.add('view-' + viewMode);
+  $$('.view-btn').forEach(btn => {
+    const active = btn.dataset.view === viewMode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active);
+  });
+}
+
+/* View mode buttons */
+$$('#viewModeGroup .view-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    viewSettings.viewMode = btn.dataset.view;
+    saveViewSettings();
+    applyViewSettings();
+    render();
+    showToast('View: ' + btn.dataset.view.charAt(0).toUpperCase() + btn.dataset.view.slice(1));
+  });
+});
+
+/* Font size buttons */
+$$('#fontSizeGroup .size-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    viewSettings.fontSize = btn.dataset.size;
+    saveViewSettings();
+    applyViewSettings();
+  });
+});
+
+/* Compact toggle */
+const compactToggleEl = $('#compactToggle');
+if (compactToggleEl) {
+  compactToggleEl.addEventListener('change', () => {
+    viewSettings.compact = compactToggleEl.checked;
+    saveViewSettings();
+    applyViewSettings();
+    showToast(compactToggleEl.checked ? 'Compact mode on' : 'Compact mode off');
+  });
+}
+
+/* ---------- Keyboard shortcuts ---------- */
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    persist(true);
+    showToast('Saved');
+  }
+});
+
+/* ---------- Init ---------- */
+loadTheme();
+loadViewSettings();
+applyViewSettings();
+loadState();
+syncMetaInputs();
+render();
