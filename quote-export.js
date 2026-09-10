@@ -19,6 +19,17 @@ const QUOTE_NOTES = [
   '6.Exclusion   :   Counter top/Dado tiles/Light fixtures/Electrical and Plumbing work/Any kind of Appliances/Any kind of Civil works are not part of our Offer.'
 ];
 
+function getQuoteNotes() {
+  const pack = (typeof catalogState !== 'undefined' && catalogState.data && catalogState.data.reusable_text) || {};
+  const items = pack.notes;
+  if (!Array.isArray(items) || !items.length) return QUOTE_NOTES;
+  return items.map((t, i) => {
+    const s = String(t).trim();
+    if (/^\d+[\.\)]/.test(s)) return s;
+    return (i + 1) + '. ' + s;
+  });
+}
+
 function fmtQuoteDate(iso) {
   if (!iso) return '';
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -322,7 +333,7 @@ async function exportOfficialExcel() {
   r++;
 
   band('NOTE');
-  QUOTE_NOTES.forEach(note => {
+  getQuoteNotes().forEach(note => {
     paintRange(r, r, 1, 7, { alignment: align('left') });
     ws.mergeCells(r, 2, r, 7);
     paint(r, 2, note, { font: font(), alignment: align('left') });
@@ -373,7 +384,7 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
       '<tr class="total"><td colspan="6">TOTAL</td><td class="amt">' + inr(sec.total, 0) + '</td></tr>';
   }).join('');
 
-  const notes = QUOTE_NOTES.map(n =>
+  const notes = getQuoteNotes().map(n =>
     '<tr class="note"><td></td><td colspan="6">' + escapeHtml(n) + '</td></tr>'
   ).join('');
   const banner = bannerSrc

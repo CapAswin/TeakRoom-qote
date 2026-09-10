@@ -131,6 +131,83 @@
       filter: brightness(1.08);
     }
 
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 240px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      background: var(--teak-tint);
+      border: 1px solid var(--line);
+      padding: 4px 4px 4px 10px;
+      border-radius: 999px;
+    }
+
+    .user-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .user-chip button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .user-chip[hidden] { display: none !important; }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+    }
+    .auth-gate[hidden] { display: none !important; }
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px 26px 24px;
+    }
+    .auth-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+    .auth-card p { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .auth-card form { display: grid; gap: 6px; margin-top: 18px; }
+    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 8px; }
+    .auth-card input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+    }
+    .auth-card button[type="submit"] {
+      margin-top: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .auth-error { color: var(--danger); font-size: 0.85rem; }
+    .auth-hint { margin-top: 16px !important; font-size: 0.78rem !important; color: var(--sub) !important; }
+    body.auth-locked > header,
+    body.auth-locked > main { visibility: hidden; }
+
     .header-actions button:hover {
       background: var(--teak-tint);
     }
@@ -278,6 +355,49 @@
       color: var(--ink);
     }
 
+    body.app-loading { overflow: hidden; }
+
+    .data-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: var(--paper);
+      transition: opacity 0.2s ease;
+    }
+    .data-loader.is-done { opacity: 0; pointer-events: none; }
+    .data-loader[hidden] { display: none !important; }
+    .data-loader-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(17, 17, 17, 0.06);
+      padding: 28px 32px;
+      min-width: 200px;
+    }
+    .data-loader-card p {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .data-loader-spin {
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: data-loader-spin 0.7s linear infinite;
+    }
+    @keyframes data-loader-spin { to { transform: rotate(360deg); } }
+
     .total-badge {
       font-family: var(--font-mono);
       font-weight: 700;
@@ -305,7 +425,7 @@
     }
   </style>
 </head>
-<body>
+<body class="app-loading">
   <header>
       <div class="header-card">
         <h1>Quote History</h1>
@@ -327,6 +447,16 @@
     <div id="quoteList"></div>
   </main>
 
+  <div class="data-loader" id="dataLoader" role="status" aria-live="polite" aria-busy="true">
+    <div class="data-loader-card">
+      <div class="data-loader-spin" aria-hidden="true"></div>
+      <p>Loading quotes…</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase.js"></script>
   <script>
     'use strict';
     const HISTORY_KEY = 'teakroom-history.v1';
@@ -374,9 +504,25 @@
       return data.reduce((sum, sec) => sum + (sec.items || []).length, 0);
     }
 
+    let displayed = [];
+
+    async function allHistory() {
+      const local = loadHistory();
+      if (!window.TeakRoomDB || !TeakRoomDB.isReady()) return local;
+      try {
+        const remote = await TeakRoomDB.listQuotes();
+        const map = new Map();
+        local.forEach(q => map.set(String(q.id), q));
+        remote.forEach(q => map.set(String(q.id), q));
+        return Array.from(map.values()).sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+      } catch (e) {
+        console.warn('Cloud history unavailable:', e.message || e);
+        return local;
+      }
+    }
+
     function openQuote(id) {
-      const history = loadHistory();
-      const quote = history.find(q => q.id === id);
+      const quote = displayed.find(q => String(q.id) === String(id));
       if (!quote) return;
       try {
         localStorage.setItem(SAVE_KEY, JSON.stringify({
@@ -389,15 +535,19 @@
       } catch { alert('Failed to open quote — storage may be full.'); }
     }
 
-    function deleteQuote(id) {
+    async function deleteQuote(id) {
       if (!confirm('Delete this saved quote?')) return;
-      const history = loadHistory().filter(q => q.id !== id);
-      writeHistory(history);
+      writeHistory(loadHistory().filter(q => String(q.id) !== String(id)));
+      if (window.TeakRoomDB && TeakRoomDB.isReady()) {
+        try { await TeakRoomDB.deleteQuote(id); }
+        catch (e) { console.warn('Cloud delete failed:', e.message || e); }
+      }
       render();
     }
 
-    function render() {
-      const history = loadHistory();
+    async function render() {
+      displayed = await allHistory();
+      const history = displayed;
       const list = document.getElementById('quoteList');
       const empty = document.getElementById('emptyState');
 
@@ -417,7 +567,7 @@
         const place = (q.meta && q.meta.place) || '';
         const validTill = (q.meta && q.meta.validtill) || '';
 
-        return '<div class="quote-card" data-id="' + q.id + '">'
+        return '<div class="quote-card" data-id="' + esc(String(q.id)) + '">'
           + '<div>'
           +   '<div class="quote-meta">'
           +     '<div class="label-value"><dt>Quote No.</dt><dd>' + esc(qno) + '</dd></div>'
@@ -433,12 +583,19 @@
           + '</div>'
           + '<div class="quote-actions">'
           +   '<span class="total-badge">' + formatCurrency(total) + '</span>'
-          +   '<button class="open-btn" onclick="openQuote(' + q.id + ')">&#x2197; Open</button>'
-          +   '<button class="del-btn" onclick="deleteQuote(' + q.id + ')" title="Delete">&#x2715;</button>'
+          +   '<button type="button" class="open-btn">&#x2197; Open</button>'
+          +   '<button type="button" class="del-btn" title="Delete">&#x2715;</button>'
           + '</div>'
           + '</div>';
       }).join('');
     }
+
+    document.getElementById('quoteList').addEventListener('click', e => {
+      const card = e.target.closest('.quote-card');
+      if (!card) return;
+      if (e.target.closest('.open-btn')) openQuote(card.dataset.id);
+      if (e.target.closest('.del-btn')) deleteQuote(card.dataset.id);
+    });
 
     function esc(s) {
       const d = document.createElement('div');
@@ -466,7 +623,24 @@
     });
 
     loadTheme();
-    render();
+
+    function hideDataLoader() {
+      const el = document.getElementById('dataLoader');
+      document.body.classList.remove('app-loading');
+      if (!el || el.hidden) return;
+      el.setAttribute('aria-busy', 'false');
+      el.classList.add('is-done');
+      setTimeout(function () { el.hidden = true; }, 220);
+    }
+
+    if (window.TeakRoomDB) {
+      TeakRoomDB.start()
+        .then(render)
+        .catch(function () { return render(); })
+        .finally(hideDataLoader);
+    } else {
+      Promise.resolve(render()).finally(hideDataLoader);
+    }
   </script>
 </body>
 </html>
