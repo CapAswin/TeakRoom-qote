@@ -1619,25 +1619,14 @@ function startEditor(openInitModal) {
     .finally(hideDataLoader);
 }
 
-/* Drop any saved draft so the editor enters exactly like a brand-new quote.
-   Used right after auth, before the section picker opens. */
-function beginFresh() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
-  meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
-  Object.keys(metaImported).forEach(k => metaImported[k] = false);
-  data = emptyData();
-  step = 0;
-  syncMetaInputs();
-}
-
-/* After auth, enter the editor as a fresh quote and open the section picker
-   first (rooms preselected per the catalog's init_selection). loadCatalog is
-   idempotent, so startEditor's own load won't rebuild the list and wipe checks. */
+/* After auth, resume the recent copy — loadState() restores the last draft
+   from localStorage. The section picker opens first only when the restored
+   quote is empty; the recent copy is never wiped on login. It is reset only
+   by the explicit "Start Fresh" action. loadCatalog is idempotent, so
+   startEditor's own load won't rebuild the list and wipe the init checks. */
 function enterWithSectionPicker() {
-  beginFresh();
   loadCatalog().then(ok => {
-    if (ok) openRoomModal('init');
-    startEditor(false);
+    startEditor(ok ? undefined : false);
   });
 }
 
