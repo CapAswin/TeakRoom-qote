@@ -247,6 +247,12 @@ const noteText = (item, amt) => {
 /* ---------- Amount cell + override ---------- */
 const itemRowSel = (s, i) => `[data-sec="${s}"][data-item="${i}"]`;
 
+/* Sub-head serial: a, b, c … z, aa, ab … */
+function alphaIndex(n) {
+  if (n < 26) return String.fromCharCode(97 + n);
+  return alphaIndex(Math.floor(n / 26) - 1) + String.fromCharCode(97 + (n % 26));
+}
+
 function refreshAmountCell(sIdx, iIdx) {
   const wrap = $(itemRowSel(sIdx, iIdx) + ' .calc-amount-wrap');
   if (!wrap) return;
@@ -456,7 +462,11 @@ function buildItem(sec, item, sIdx, iIdx) {
     showToast('Pricing: ' + PRICING_TYPES.find(p => p[0] === item.type)[1]);
   });
 
-  nameRow.append(nameInput, typeSelect);
+  /* Sub-head serial (a, b, c …) for this item */
+  const idxSpan = el('span', 'item-index');
+  idxSpan.textContent = alphaIndex(iIdx) + '. ';
+
+  nameRow.append(idxSpan, nameInput, typeSelect);
   row.appendChild(nameRow);
 
   /* specification button — opens a modal to edit the spec for THIS item in
@@ -550,6 +560,9 @@ function buildSection(sec, sIdx) {
   nameInput.setAttribute('aria-label', 'Section name');
   nameInput.addEventListener('input', () => { sec.name = nameInput.value; updateChrome(); persist(); });
 
+  const idxSpan = el('span', 'sec-index');
+  idxSpan.textContent = (sIdx + 1) + '. ';
+
   const total = el('span', 'stotal');
   total.setAttribute('aria-label', 'Section total');
 
@@ -588,7 +601,7 @@ function buildSection(sec, sIdx) {
     showToast('Section removed');
   });
 
-  head.append(nameInput, total, cp, rm);
+  head.append(idxSpan, nameInput, total, cp, rm);
   secEl.appendChild(head);
 
   /* Wrap items in a container for grid/cards views */
