@@ -975,6 +975,7 @@ async function loadLocalCatalog() {
 }
 
 async function loadCatalog() {
+  if (catalogState.data) return true;
   let remote = null;
   if (window.TeakRoomDB && TeakRoomDB.isReady()) {
     try {
@@ -1263,21 +1264,47 @@ function hideDataLoader() {
   setTimeout(() => { el.hidden = true; }, 220);
 }
 
-function startEditor() {
+/* openInitModal: false skips the auto-open room picker (used when the caller
+   already opened it — the section picker must be the first thing after login). */
+function startEditor(openInitModal) {
   loadState();
   syncMetaInputs();
   render();
   return loadCatalog()
     .then(ok => {
       if (!ok) return;
-      const noItems = !data.some(sec => sec.items.length > 0);
-      const noMeta = !(meta.qno || meta.client || meta.place);
-      if (noItems && noMeta) openRoomModal('init');
+      if (openInitModal !== false) {
+        const noItems = !data.some(sec => sec.items.length > 0);
+        const noMeta = !(meta.qno || meta.client || meta.place);
+        if (noItems && noMeta) openRoomModal('init');
+      }
     })
     .catch(err => {
       console.warn('Catalog load failed:', err.message || err);
     })
     .finally(hideDataLoader);
+}
+
+/* Drop any saved draft so the editor enters exactly like a brand-new quote.
+   Used right after auth, before the section picker opens. */
+function beginFresh() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
+  Object.keys(metaImported).forEach(k => metaImported[k] = false);
+  data = emptyData();
+  step = 0;
+  syncMetaInputs();
+}
+
+/* After auth, enter the editor as a fresh quote and open the section picker
+   first (rooms preselected per the catalog's init_selection). loadCatalog is
+   idempotent, so startEditor's own load won't rebuild the list and wipe checks. */
+function enterWithSectionPicker() {
+  beginFresh();
+  loadCatalog().then(ok => {
+    if (ok) openRoomModal('init');
+    startEditor(false);
+  });
 }
 
 loadTheme();
@@ -1288,10 +1315,10 @@ if (window.TeakRoomDB) {
   TeakRoomDB.start().then(() => {
     if (TeakRoomDB.isConfigured() && !TeakRoomDB.isSignedIn()) {
       hideDataLoader();
-      TeakRoomDB.onSignedIn(startEditor);
+      TeakRoomDB.onSignedIn(enterWithSectionPicker);
       return;
     }
-    startEditor();
+    enterWithSectionPicker();
   }).catch(err => {
     console.warn('Supabase init failed:', err.message || err);
     startEditor();

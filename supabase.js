@@ -344,23 +344,68 @@ window.TeakRoomDB = (function () {
     });
   }
 
-  async function loadCatalog() {
+  /* ---------- Catalog cache ----------
+     The catalog is fetched on most page loads. It changes only when records
+     are edited in admin.html (or the DB is changed externally), so we cache
+     the assembled catalog in localStorage and reuse it until it is
+     invalidated or expires. */
+  const CATALOG_CACHE_KEY = 'teakroom-catalog-cache.v1';
+  const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+  function readCatalogCache() {
+    try {
+      const raw = localStorage.getItem(CATALOG_CACHE_KEY);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (!entry || !entry.data || !entry.savedAt) return null;
+      return entry;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeCatalogCache(data) {
+    try {
+      localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data }));
+    } catch (e) { /* quota exceeded — skip caching */ }
+  }
+
+  function invalidateCatalogCache() {
+    try { localStorage.removeItem(CATALOG_CACHE_KEY); } catch (e) { /* ignore */ }
+  }
+
+  async function loadCatalog(forceRefresh) {
     if (!isReady()) return null;
-    const [categories, products, brands, metaRows, reusable] = await Promise.all([
-      fetchTable('categories'),
-      fetchTable('products'),
-      fetchTable('brands'),
-      fetchTable('meta'),
-      fetchTable('reusable_text')
-    ]);
-    const assembled = {
-      meta: mapMeta(metaRows),
-      categories: mapCategories(categories, products),
-      brands: mapBrands(brands),
-      reusable_text: mapReusable(reusable)
-    };
-    if (!assembled.categories.length) return { ...assembled, _emptyCatalog: true };
-    return assembled;
+    const cached = readCatalogCache();
+    if (cached && cached.data &&
+        (forceRefresh === true || Date.now() - cached.savedAt < CATALOG_CACHE_TTL)) {
+      return cached.data;
+    }
+    try {
+      const [categories, products, brands, metaRows, reusable] = await Promise.all([
+        fetchTable('categories'),
+        fetchTable('products'),
+        fetchTable('brands'),
+        fetchTable('meta'),
+        fetchTable('reusable_text')
+      ]);
+      const assembled = {
+        meta: mapMeta(metaRows),
+        categories: mapCategories(categories, products),
+        brands: mapBrands(brands),
+        reusable_text: mapReusable(reusable)
+      };
+      if (assembled.categories.length) {
+        writeCatalogCache(assembled);
+        return assembled;
+      }
+      /* Empty DB — don't cache an empty state; reuse the last good copy. */
+      return cached && cached.data ? cached.data : { ...assembled, _emptyCatalog: true };
+    } catch (err) {
+      /* Network failed — reuse the last good copy rather than showing nothing. */
+      if (cached && cached.data) return cached.data;
+      throw err;
+    }
   }
 
   function rowToQuote(row) {
@@ -436,6 +481,7 @@ window.TeakRoomDB = (function () {
     currentUser,
     onSignedIn,
     loadCatalog,
+    invalidateCatalogCache,
     listQuotes,
     saveQuote,
     deleteQuote
