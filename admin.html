@@ -651,6 +651,10 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Add New
       </button>
+      <button class="btn" id="refreshBtn" title="Re-fetch this table from the database">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 1.5v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
     </div>
 
     <!-- Table -->
@@ -702,6 +706,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
   <script src="supabase-config.js"></script>
+  <script src="supabase.js"></script>
   <script>
   'use strict';
 
@@ -884,8 +889,46 @@
     loadTable(name);
   }
 
+  /* --- Per-table cache ---
+     Each table's rows are cached in localStorage with a dirty flag. The flag is
+     true when the table must be re-fetched from the API; after fetching and
+     storing the fresh rows the flag is set back to false. Tab switches and page
+     loads reuse the cached rows while the flag is false, so no API call is made. */
+  const ADMIN_CACHE_KEY = 'teakroom-admin-cache.v1';
+
+  function readAdminCache() {
+    try {
+      const raw = localStorage.getItem(ADMIN_CACHE_KEY);
+      if (!raw) return null;
+      const c = JSON.parse(raw);
+      if (!c) return null;
+      return { flags: c.flags || {}, data: c.data || {} };
+    } catch (e) { return null; }
+  }
+
+  function writeAdminCache(cache) {
+    try { localStorage.setItem(ADMIN_CACHE_KEY, JSON.stringify(cache)); }
+    catch (e) { /* quota exceeded — skip caching */ }
+  }
+
+  /* Mark a table so its next load re-queries the API. */
+  function markTableDirty(name) {
+    const cache = readAdminCache() || { flags: {}, data: {} };
+    cache.flags[name] = true;
+    writeAdminCache(cache);
+  }
+
   /* --- Data --- */
   async function loadTable(name) {
+    /* No cached rows at all means there is nothing to show yet — fetch. */
+    const cache = readAdminCache();
+    if (cache && cache.data[name] && cache.flags[name] !== true) {
+      rows = cache.data[name];
+      buildFilterOptions();
+      applyFilters();
+      return;
+    }
+
     document.getElementById('dataLoader').hidden = false;
     document.getElementById('dataLoader').classList.remove('is-done');
     document.body.classList.add('app-loading');
@@ -893,9 +936,14 @@
       const { data, error } = await client.from(name).select('*');
       if (error) throw error;
       rows = data || [];
+      const next = readAdminCache() || { flags: {}, data: {} };
+      next.data[name] = rows;
+      next.flags[name] = false;
+      writeAdminCache(next);
     } catch (err) {
       toast('Failed to load ' + name + ': ' + (err.message || err), 'error');
-      rows = [];
+      /* Keep the last good copy instead of showing an empty table. */
+      rows = (cache && cache.data[name]) ? cache.data[name] : [];
     }
     buildFilterOptions();
     applyFilters();
@@ -963,6 +1011,11 @@
 
   document.getElementById('searchInput').addEventListener('input', () => { page = 0; applyFilters(); });
   document.getElementById('filterSelect').addEventListener('change', () => { page = 0; applyFilters(); });
+
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    markTableDirty(activeTable);
+    loadTable(activeTable);
+  });
 
   /* --- Render --- */
   function renderTable() {
@@ -1137,6 +1190,8 @@
         if (error) throw error;
         toast('Record updated', 'success');
       }
+      if (window.TeakRoomDB) TeakRoomDB.invalidateCatalogCache();
+      markTableDirty(activeTable);
       closeModal();
       loadTable(activeTable);
     } catch (err) {
@@ -1151,6 +1206,8 @@
       const { error } = await client.from(activeTable).delete().eq('id', editingRow.id);
       if (error) throw error;
       toast('Record deleted', 'success');
+      if (window.TeakRoomDB) TeakRoomDB.invalidateCatalogCache();
+      markTableDirty(activeTable);
       closeModal();
       loadTable(activeTable);
     } catch (err) {
@@ -1164,6 +1221,8 @@
       const { error } = await client.from(activeTable).delete().eq('id', id);
       if (error) throw error;
       toast('Record deleted', 'success');
+      if (window.TeakRoomDB) TeakRoomDB.invalidateCatalogCache();
+      markTableDirty(activeTable);
       loadTable(activeTable);
     } catch (err) {
       toast('Delete failed: ' + (err.message || err), 'error');

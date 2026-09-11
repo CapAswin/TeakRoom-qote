@@ -401,7 +401,7 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
 <title>${escapeHtml(pdfName)}</title>
 <style>
   @page { size: letter portrait; margin: 10mm; }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; font-family: Calibri, Arial, sans-serif; font-size: 8.5pt; color: #000; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; text-align: center; }

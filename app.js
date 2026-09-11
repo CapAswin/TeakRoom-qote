@@ -255,7 +255,31 @@ function refreshAmountCell(sIdx, iIdx) {
   const display = el('div', 'calc-amount');
   display.textContent = fmt(computeAmount(item));
   if (isOverride(item)) display.classList.add('overridden');
-  wrap.appendChild(display);
+  wrap.append(makeSyncButton(), display);
+  syncOverrideBtn(sIdx, iIdx);
+}
+
+/* The sync icon shown just before an item's total. Clicking opens the manual
+   amount input; when a manual amount is set the icon highlights and a second
+   click resets back to the formula. */
+function makeSyncButton() {
+  const btn = el('button', 'sync-override no-print');
+  btn.type = 'button';
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M3.2 5.2A5.2 5.2 0 0 1 12.9 3M14 3.5V.6h-2.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M12.8 10.8a5.2 5.2 0 0 1-9.7 2.2M2 12.5v2.9h2.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return btn;
+}
+
+/* Keep the sync icon button in sync with the item's override state. */
+function syncOverrideBtn(sIdx, iIdx) {
+  const btn = document.querySelector(itemRowSel(sIdx, iIdx) + ' .sync-override');
+  const item = data[sIdx] && data[sIdx].items[iIdx];
+  if (!btn || !item) return;
+  const on = isOverride(item);
+  btn.title = on ? 'Reset to formula' : 'Override amount';
+  btn.setAttribute('aria-label', on ? 'Reset to formula' : 'Set a manual amount');
+  btn.classList.toggle('is-overridden', on);
 }
 
 function openOverride(sIdx, iIdx) {
@@ -329,7 +353,7 @@ function makeAmountCell(item) {
   display.textContent = fmt(computeAmount(item));
   if (isOverride(item)) display.classList.add('overridden');
   if (!isOverride(item) && imp.rate) display.classList.add('imported');
-  wrap.appendChild(display);
+  wrap.append(makeSyncButton(), display);
   f.append(l, wrap);
   return f;
 }
@@ -435,6 +459,15 @@ function buildItem(sec, item, sIdx, iIdx) {
   nameRow.append(nameInput, typeSelect);
   row.appendChild(nameRow);
 
+  /* specification button — opens a modal to edit the spec for THIS item in
+     this quote only (the catalog is not touched). Exported in the Description column. */
+  const specBtn = el('button', 'spec-btn no-print' + (item.desc ? ' has-spec' : ''));
+  specBtn.type = 'button';
+  specBtn.title = item.desc ? 'Specification: ' + item.desc : 'Add a specification for this item';
+  specBtn.setAttribute('aria-label', item.desc ? 'Edit specification' : 'Add specification');
+  specBtn.addEventListener('click', () => openSpecModal(sIdx, iIdx));
+  specBtn.appendChild(el('span', 'spec-dot'));
+
   /* dynamic input fields */
   const fieldRow = el('div', 'field-row');
   row.appendChild(fieldRow);
@@ -444,9 +477,30 @@ function buildItem(sec, item, sIdx, iIdx) {
   if (item.type !== 'fixed') row.appendChild(note);
 
   /* actions */
-  const removeBtn = el('button', 'remove-btn');
+  const copyBtn = el('button', 'copy-btn no-print');
+  copyBtn.type = 'button';
+  copyBtn.title = 'Duplicate this item';
+  copyBtn.setAttribute('aria-label', 'Duplicate this item');
+  copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M6 2.5h4a1 1 0 0 1 1 1V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<rect x="3" y="4.5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/></svg>';
+  copyBtn.addEventListener('click', () => {
+    const clone = JSON.parse(JSON.stringify(item));
+    if (clone.name) clone.name = clone.name + ' (Copy)';
+    sec.items.splice(iIdx + 1, 0, clone);
+    pendingFocus = { sel: itemRowSel(sIdx, iIdx + 1) + ' .item-name', select: true };
+    render();
+    persist();
+    showToast('Item duplicated');
+  });
+
+  const removeBtn = el('button', 'remove-btn no-print');
   removeBtn.type = 'button';
-  removeBtn.textContent = 'Remove';
+  removeBtn.title = 'Remove this item';
+  removeBtn.setAttribute('aria-label', 'Remove this item');
+  removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M3 4h10M6.4 4V2.8a.8.8 0 0 1 .8-.8h1.6a.8.8 0 0 1 .8.8V4M4.6 4l.6 9.2a.8.8 0 0 0 .8.8h4a.8.8 0 0 0 .8-.8L11.4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<path d="M6.5 7.3v4M9.5 7.3v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
   removeBtn.addEventListener('click', () => {
     sec.items.splice(iIdx, 1);
     render();
@@ -455,27 +509,11 @@ function buildItem(sec, item, sIdx, iIdx) {
   });
 
   const actions = el('div', 'item-actions no-print');
-  if (item.type !== 'fixed') {
-    const toggle = el('button', 'override-toggle');
-    toggle.type = 'button';
-    const syncToggle = () => { toggle.textContent = isOverride(item) ? 'Reset to formula' : 'Override amount'; };
-    syncToggle();
-    toggle.addEventListener('click', () => {
-      if (isOverride(item)) {
-        item.override = null;
-        refreshAmountCell(sIdx, iIdx);
-        syncToggle();
-        updateTotals();
-        persist();
-        showToast('Reset to formula');
-      } else {
-        openOverride(sIdx, iIdx);
-      }
-    });
-    actions.append(toggle, removeBtn);
-  } else {
-    actions.append(el('span'), removeBtn);
-  }
+  const actionsRight = el('div', 'item-actions-right');
+  const actionsLeft = el('div', 'item-actions-left');
+  actionsLeft.appendChild(specBtn);
+  actionsRight.append(copyBtn, removeBtn);
+  actions.append(actionsLeft, actionsRight);
   row.appendChild(actions);
 
   return row;
@@ -489,8 +527,9 @@ function refreshAmountCellIfNeeded(row) {
     const display = el('div', 'calc-amount');
     display.textContent = fmt(computeAmountFromRow(row));
     wrap.innerHTML = '';
-    wrap.appendChild(display);
+    wrap.append(makeSyncButton(), display);
   }
+  syncOverrideBtn(row.dataset.sec, row.dataset.item);
 }
 
 function computeAmountFromRow(row) {
@@ -561,11 +600,7 @@ function buildSection(sec, sIdx) {
   add.type = 'button';
   add.textContent = '+ Add item to ' + sec.name;
   add.addEventListener('click', () => {
-    sec.items.push({ name: 'NEW ITEM', type: 'area', length: 0, height: 0, rate: 0 });
-    pendingFocus = { sel: itemRowSel(sIdx, sec.items.length - 1) + ' .item-name', select: true };
-    render();
-    persist();
-    showToast('Item added');
+    openItemModal(sIdx);
   });
   secEl.appendChild(add);
   return secEl;
@@ -975,6 +1010,7 @@ async function loadLocalCatalog() {
 }
 
 async function loadCatalog() {
+  if (catalogState.data) return true;
   let remote = null;
   if (window.TeakRoomDB && TeakRoomDB.isReady()) {
     try {
@@ -1128,6 +1164,11 @@ function openRoomModal(mode) {
   overlay.setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
   syncModalConfirm();
+
+  /* Admin-catalog switch is only meaningful when creating a blank section. */
+  const adminSw = $('#roomAdminSaveRow');
+  adminSw.hidden = !adding;
+  $('#roomAdminSave').checked = false;
 }
 
 function hideRoomModal() {
@@ -1144,12 +1185,16 @@ function selectedRoomNames() {
 
 function catalogItem(p) {
   const type = p.unit_type || 'quantity';
+  const importedFields = {
+    name: true, desc: Boolean(p.specification), rate: true, type: true
+  };
   const base = {
     name: p.name,
     type,
     rate: p.default_rate || 0,
     desc: p.specification || '',
-    override: null
+    override: null,
+    importedFields
   };
   if (type === 'area') return { ...base, length: 0, height: 0 };
   if (type === 'running') return { ...base, length: 0 };
@@ -1211,11 +1256,13 @@ $('#modalStartFresh').addEventListener('click', () => {
     const idx = (modalInsertAt == null) ? data.length : modalInsertAt + 1;
     data.splice(idx, 0, sec);
     step = idx;
+    const wantAdmin = $('#roomAdminSave').checked;
     pendingFocus = { sel: '[data-sec="' + idx + '"] .sec-name', select: true };
     hideRoomModal();
     render();
     persist();
     showToast('Empty section added');
+    if (wantAdmin) saveNewSectionToAdmin(sec);
     return;
   }
 
@@ -1229,6 +1276,294 @@ $('#modalStartFresh').addEventListener('click', () => {
   render();
   persist(true);
   showToast('Started a fresh quote');
+});
+
+/* Click a row's sync icon (next to its total) to override the amount:
+   first click opens the manual input, second click resets to the formula. */
+$('#sections').addEventListener('click', e => {
+  const btn = e.target.closest('.sync-override');
+  if (!btn) return;
+  const row = btn.closest('.item');
+  if (!row) return;
+  const sIdx = +row.dataset.sec;
+  const iIdx = +row.dataset.item;
+  const item = data[sIdx] && data[sIdx].items[iIdx];
+  if (!item) return;
+  if (isOverride(item)) {
+    item.override = null;
+    refreshAmountCell(sIdx, iIdx);
+    updateTotals();
+    persist();
+    showToast('Reset to formula');
+  } else {
+    openOverride(sIdx, iIdx);
+  }
+});
+
+/* ---------- Item picker modal ----------
+   "Add item to <section>" asks first: pick a saved product from the
+   preloaded catalog (matched by section name, else the whole catalog), or
+   create a brand-new item. Nothing here refetches — it uses catalogState.data. */
+
+let itemModalSIdx = null;
+
+function itemModalOpen() {
+  return $('#itemModal').getAttribute('aria-hidden') === 'false';
+}
+
+function visibleRate(p) {
+  const r = num(p.default_rate);
+  return r ? inr(r) : '';
+}
+
+function openItemModal(sIdx) {
+  const sec = data[sIdx];
+  if (!sec) return;
+  if (!catalogState.data) {
+    loadCatalog().then(ok => { if (ok) openItemModal(sIdx); });
+    return;
+  }
+  itemModalSIdx = sIdx;
+
+  const cats = catalogState.data.categories || [];
+  const cat = cats.find(c => c.room === sec.name) || null;
+  let picks;
+  if (cat) {
+    picks = (cat.products || []).map(p => ({ ...p, _room: cat.room }));
+  } else {
+    /* Section not in the catalog (renamed / custom) — offer the full catalog. */
+    picks = [];
+    cats.forEach(c => (c.products || []).forEach(p => picks.push({ ...p, _room: c.room })));
+  }
+
+  $('#itemModalTitle').textContent = 'Add item to ' + (sec.name || 'this section');
+  $('#itemModalSub').textContent = cat
+    ? 'Pick a saved product from “' + cat.room + '”, or create a new one below.'
+    : 'No catalog products match this section. Pick from the full catalog, or create a new one below.';
+
+  const list = $('#itemModalPicker');
+  list.innerHTML = '';
+  picks.forEach(p => {
+    const btn = el('button', 'product-pick');
+    btn.type = 'button';
+    const name = el('span', 'product-pick-name');
+    name.textContent = p.name;
+    const meta = el('span', 'product-pick-meta');
+    meta.textContent = (p._room && p._room !== sec.name ? p._room + ' · ' : '') +
+      p.unit_type + (num(p.default_rate) ? ' · ' + visibleRate(p) : '');
+    const spec = el('span', 'product-pick-spec');
+    spec.textContent = p.specification || '';
+    btn.append(name, meta, spec);
+    btn.addEventListener('click', () => addPickedItem(sIdx, p));
+    list.appendChild(btn);
+  });
+
+  const forceCreate = !picks.length;
+  $('#itemModalNew').hidden = forceCreate;
+  resetItemForm();
+  showItemPane(forceCreate);
+  $('#itemModal').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+}
+
+function hideItemModal() {
+  $('#itemModal').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  itemModalSIdx = null;
+}
+
+function showItemPane(create) {
+  $('#itemModalPickPane').hidden = create;
+  $('#itemModalCreatePane').hidden = !create;
+  $('#itemModalCreate').hidden = !create;
+  $('#itemModalCancel').textContent = create ? 'Cancel' : 'Close';
+  if (create) setTimeout(() => $('#itemFormName').focus(), 0);
+}
+
+function resetItemForm() {
+  $('#itemFormName').value = '';
+  $('#itemFormSpec').value = '';
+  $('#itemFormRate').value = '';
+  $('#itemFormType').value = 'area';
+  $('#itemFormAdminSave').checked = false;
+}
+
+function addPickedItem(sIdx, p) {
+  const item = catalogItem(p);
+  data[sIdx].items.push(item);
+  pendingFocus = { sel: itemRowSel(sIdx, data[sIdx].items.length - 1) + ' .item-name', select: true };
+  hideItemModal();
+  render();
+  persist();
+  showToast('Item added');
+}
+
+function confirmItemCreate() {
+  const sIdx = itemModalSIdx;
+  const sec = data[sIdx];
+  if (!sec) return;
+  const name = $('#itemFormName').value.trim();
+  if (!name) { showToast('Give the item a name'); $('#itemFormName').focus(); return; }
+  const type = $('#itemFormType').value;
+  const rate = num($('#itemFormRate').value);
+  const base = { name, desc: $('#itemFormSpec').value.trim(), type, rate, override: null };
+  let item;
+  if (type === 'area') item = { ...base, length: 0, height: 0 };
+  else if (type === 'running') item = { ...base, length: 0 };
+  else if (type === 'fixed') item = { ...base, amount: rate || 0 };
+  else item = { ...base, qty: 1 };
+  sec.items.push(item);
+  const wantAdmin = $('#itemFormAdminSave').checked;
+  hideItemModal();
+  pendingFocus = { sel: itemRowSel(sIdx, sec.items.length - 1) + ' .item-name', select: true };
+  render();
+  persist();
+  showToast('Item added');
+  if (wantAdmin) saveNewProductToAdmin(sIdx, item);
+}
+
+/* Persist a newly-created item into the admin products table (and the
+   preloaded in-memory catalog) so it shows up next time without a refetch.
+   If the section name isn't a category yet, create that category first. */
+async function saveNewProductToAdmin(sIdx, item) {
+  const sec = data[sIdx];
+  if (!window.TeakRoomDB || !TeakRoomDB.isReady()) {
+    showToast('Admin catalog unavailable — item kept in quote only');
+    return;
+  }
+  try {
+    let cat = (catalogState.data.categories || []).find(c => c.room === sec.name) || null;
+    if (!cat) {
+      const created = await TeakRoomDB.insertCategory({ room: sec.name, sort_order: (catalogState.data.categories || []).length });
+      if (!created || !created.id) throw new Error('category not created');
+      cat = { id: created.id, room: created.room || sec.name, init_selection: false, products: [] };
+      catalogState.data.categories.push(cat);
+      TeakRoomDB.invalidateCatalogCache();
+    }
+    const inserted = await TeakRoomDB.insertProduct({
+      name: item.name,
+      specification: item.desc || '',
+      unit_type: item.type,
+      default_rate: item.type === 'fixed' ? item.amount || 0 : item.rate || 0,
+      qty: item.qty || 1,
+      category_id: cat.id
+    });
+    if (inserted && inserted.id) {
+      cat.products.push({
+        name: inserted.name, specification: inserted.specification,
+        unit_type: inserted.unit_type,
+        default_rate: Number(inserted.default_rate) || 0,
+        gst: Number(inserted.gst) || 0,
+        qty: Number(inserted.qty) || 1
+      });
+      TeakRoomDB.invalidateCatalogCache();
+      showToast('Saved “' + item.name + '” to the admin catalog');
+    }
+  } catch (err) {
+    showToast('Could not save to admin catalog: ' + (err.message || err));
+  }
+}
+
+async function saveNewSectionToAdmin(sec) {
+  if (!window.TeakRoomDB || !TeakRoomDB.isReady()) {
+    showToast('Admin catalog unavailable');
+    return;
+  }
+  try {
+    const created = await TeakRoomDB.insertCategory({ room: sec.name, sort_order: (catalogState.data.categories || []).length });
+    if (!created || !created.id) throw new Error('category not created');
+    (catalogState.data.categories || []).push({
+      id: created.id, room: created.room || sec.name,
+      init_selection: !!created.init_selection, products: []
+    });
+    TeakRoomDB.invalidateCatalogCache();
+    showToast('Saved “' + sec.name + '” to the admin catalog');
+  } catch (err) {
+    showToast('Could not save section to admin catalog: ' + (err.message || err));
+  }
+}
+
+$('#itemModalNew').addEventListener('click', () => showItemPane(true));
+$('#itemModalCreate').addEventListener('click', confirmItemCreate);
+$('#itemModalCancel').addEventListener('click', () => {
+  if ($('#itemModalCreatePane').hidden) hideItemModal();
+  else showItemPane(false);
+});
+$('#itemModalClose').addEventListener('click', hideItemModal);
+$('#itemModal').addEventListener('click', e => { if (e.target === e.currentTarget) hideItemModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && itemModalOpen()) hideItemModal();
+});
+['itemFormName', 'itemFormSpec', 'itemFormRate'].forEach(id => {
+  const input = document.getElementById(id);
+  if (input) input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmItemCreate(); }
+  });
+});
+
+/* ---------- Specification modal ----------
+   Edits item.desc for exactly one item inside the current quote. Saving never
+   touches the catalog — it is a per-quote edit. */
+let specTarget = null;
+
+function specIsOpen() {
+  return $('#specModal').getAttribute('aria-hidden') === 'false';
+}
+
+function openSpecModal(sIdx, iIdx) {
+  const item = data[sIdx].items[iIdx];
+  if (!item) return;
+  specTarget = { sIdx, iIdx };
+  $('#specInput').value = item.desc || '';
+  $('#specClear').hidden = !item.desc;
+  $('#specModal').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  setTimeout(() => { $('#specInput').focus(); $('#specInput').select(); }, 0);
+}
+
+function closeSpecModal() {
+  $('#specModal').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  specTarget = null;
+}
+
+function syncSpecButton(sIdx, iIdx) {
+  const btn = document.querySelector(itemRowSel(sIdx, iIdx) + ' .spec-btn');
+  const item = data[sIdx] && data[sIdx].items[iIdx];
+  if (!btn || !item) return;
+  btn.title = item.desc ? 'Specification: ' + item.desc : 'Add a specification for this item';
+  btn.setAttribute('aria-label', item.desc ? 'Edit specification' : 'Add specification');
+  btn.classList.toggle('has-spec', Boolean(item.desc));
+}
+
+function saveSpec() {
+  if (!specTarget) return;
+  const item = data[specTarget.sIdx] && data[specTarget.sIdx].items[specTarget.iIdx];
+  if (!item) return;
+  item.desc = $('#specInput').value.trim();
+  if (item.importedFields) item.importedFields.desc = false;
+  syncSpecButton(specTarget.sIdx, specTarget.iIdx);
+  persist();
+  closeSpecModal();
+  showToast(item.desc ? 'Specification updated' : 'Specification cleared');
+}
+
+$('#specModalSave').addEventListener('click', saveSpec);
+$('#specClear').addEventListener('click', () => {
+  $('#specInput').value = '';
+  saveSpec();
+});
+$('#specModalCancel').addEventListener('click', closeSpecModal);
+$('#specModalClose').addEventListener('click', closeSpecModal);
+$('#specModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSpecModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && specIsOpen()) closeSpecModal();
+});
+$('#specInput').addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    saveSpec();
+  }
 });
 
 /* Close icon — only reachable in add mode (hidden in the initial picker). */
@@ -1263,21 +1598,47 @@ function hideDataLoader() {
   setTimeout(() => { el.hidden = true; }, 220);
 }
 
-function startEditor() {
+/* openInitModal: false skips the auto-open room picker (used when the caller
+   already opened it — the section picker must be the first thing after login). */
+function startEditor(openInitModal) {
   loadState();
   syncMetaInputs();
   render();
   return loadCatalog()
     .then(ok => {
       if (!ok) return;
-      const noItems = !data.some(sec => sec.items.length > 0);
-      const noMeta = !(meta.qno || meta.client || meta.place);
-      if (noItems && noMeta) openRoomModal('init');
+      if (openInitModal !== false) {
+        const noItems = !data.some(sec => sec.items.length > 0);
+        const noMeta = !(meta.qno || meta.client || meta.place);
+        if (noItems && noMeta) openRoomModal('init');
+      }
     })
     .catch(err => {
       console.warn('Catalog load failed:', err.message || err);
     })
     .finally(hideDataLoader);
+}
+
+/* Drop any saved draft so the editor enters exactly like a brand-new quote.
+   Used right after auth, before the section picker opens. */
+function beginFresh() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  meta.qno = ''; meta.client = ''; meta.place = ''; meta.validtill = todayISO();
+  Object.keys(metaImported).forEach(k => metaImported[k] = false);
+  data = emptyData();
+  step = 0;
+  syncMetaInputs();
+}
+
+/* After auth, enter the editor as a fresh quote and open the section picker
+   first (rooms preselected per the catalog's init_selection). loadCatalog is
+   idempotent, so startEditor's own load won't rebuild the list and wipe checks. */
+function enterWithSectionPicker() {
+  beginFresh();
+  loadCatalog().then(ok => {
+    if (ok) openRoomModal('init');
+    startEditor(false);
+  });
 }
 
 loadTheme();
@@ -1288,10 +1649,10 @@ if (window.TeakRoomDB) {
   TeakRoomDB.start().then(() => {
     if (TeakRoomDB.isConfigured() && !TeakRoomDB.isSignedIn()) {
       hideDataLoader();
-      TeakRoomDB.onSignedIn(startEditor);
+      TeakRoomDB.onSignedIn(enterWithSectionPicker);
       return;
     }
-    startEditor();
+    enterWithSectionPicker();
   }).catch(err => {
     console.warn('Supabase init failed:', err.message || err);
     startEditor();
