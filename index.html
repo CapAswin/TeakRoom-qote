@@ -206,9 +206,99 @@
       </div>
       <div class="modal-note" id="modalNote" hidden></div>
       <div class="modal-list" id="modalRoomList"></div>
+      <div class="modal-admin-switch" id="roomAdminSaveRow" hidden>
+        <span>Save new section to the admin catalog</span>
+        <label class="compact-toggle" title="Create this section in the admin database">
+          <input type="checkbox" id="roomAdminSave">
+          <span class="compact-switch"></span>
+        </label>
+      </div>
       <div class="modal-foot">
         <button type="button" class="btn" id="modalStartFresh">Start fresh</button>
         <button type="button" class="btn btn-primary" id="modalConfirm">Start with selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Item Picker Modal -->
+  <div class="modal-overlay" id="itemModal" aria-hidden="true" role="dialog" aria-label="Add item to section">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="itemModalTitle">Add item</h2>
+          <p class="modal-sub" id="itemModalSub">Pick a saved product or create a new one.</p>
+        </div>
+        <button type="button" class="modal-close" id="itemModalClose" title="Close (Esc)" aria-label="Close dialog">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-list">
+        <div class="modal-pick-pane" id="itemModalPickPane">
+          <div id="itemModalPicker"></div>
+          <button type="button" class="product-pick product-pick-new" id="itemModalNew">+ New item</button>
+        </div>
+        <div class="create-form" id="itemModalCreatePane" hidden>
+          <div class="form-field">
+            <label for="itemFormName">Item name</label>
+            <input type="text" id="itemFormName" placeholder="e.g. Wardrobe" maxlength="120">
+          </div>
+          <div class="form-field">
+            <label for="itemFormSpec">Specification</label>
+            <input type="text" id="itemFormSpec" placeholder="Material, finish, makes, etc.">
+          </div>
+          <div class="form-row-2">
+            <div class="form-field">
+              <label for="itemFormType">Pricing</label>
+              <select id="itemFormType">
+                <option value="area">Area (sqft)</option>
+                <option value="running">Running (Rft)</option>
+                <option value="quantity">Quantity (Nos)</option>
+                <option value="fixed">Lumpsum</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="itemFormRate">Rate (₹)</label>
+              <input type="number" id="itemFormRate" step="any" min="0" inputmode="decimal" placeholder="0">
+            </div>
+          </div>
+          <div class="modal-admin-switch">
+            <span>Save this new item to the admin catalog</span>
+            <label class="compact-toggle" title="Insert this product into the admin database">
+              <input type="checkbox" id="itemFormAdminSave">
+              <span class="compact-switch"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="itemModalCancel">Close</button>
+        <button type="button" class="btn btn-primary" id="itemModalCreate" hidden>Create item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specification Modal -->
+  <div class="modal-overlay" id="specModal" aria-hidden="true" role="dialog" aria-label="Edit specification">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="specModalTitle">Specification</h2>
+          <p class="modal-sub">Edit this item's specification for this quote only — the catalog is not changed.</p>
+        </div>
+        <button type="button" class="modal-close" id="specModalClose" title="Close (Esc)" aria-label="Close dialog">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label for="specInput">Specification</label>
+        <textarea id="specInput" rows="3" placeholder="Material, finish, makes, etc."></textarea>
+        <span class="modal-body-hint">Shown as the item's description in the exported quote.</span>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="specClear" hidden>Clear</button>
+        <span class="modal-foot-spacer"></span>
+        <button type="button" class="btn" id="specModalCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="specModalSave">Save specification</button>
       </div>
     </div>
   </div>

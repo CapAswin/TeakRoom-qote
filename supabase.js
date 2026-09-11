@@ -337,6 +337,7 @@ window.TeakRoomDB = (function () {
       const fromNested = Array.isArray(nested) ? nested.map(mapProduct) : [];
       const fromJoin = byCat[String(cat.id)] || byCat[room] || byCat[String(cat.name)] || [];
       return {
+        id: cat.id != null ? cat.id : null,
         room,
         init_selection: !!(cat.init_selection || cat.initSelection),
         products: fromNested.length ? fromNested : fromJoin
@@ -471,6 +472,44 @@ window.TeakRoomDB = (function () {
     }
   }
 
+  /* ---------- Admin-catalog inserts ----------
+     Used by the editor's "save to admin catalog" switches when a brand-new
+     section/product is created from a modal. The caller keeps its preloaded
+     catalogState.data in sync; we only persist to Supabase here. */
+
+  async function insertCategory(data) {
+    if (!isReady()) return null;
+    const row = {
+      room: data.room || 'NEW AREA',
+      sort_order: num(data.sort_order) || 0,
+      init_selection: !!(data.init_selection)
+    };
+    const { data: inserted, error } = await client.from('categories').insert(row).select('*').single();
+    if (error) throw error;
+    return inserted || null;
+  }
+
+  async function insertProduct(data) {
+    if (!isReady()) return null;
+    const row = {
+      name: data.name || 'NEW ITEM',
+      specification: data.specification || '',
+      unit_type: data.unit_type || 'quantity',
+      default_rate: num(data.default_rate) || 0,
+      gst: num(data.gst) || 0,
+      qty: num(data.qty) || 1,
+      category_id: data.category_id || null
+    };
+    const { data: inserted, error } = await client.from('products').insert(row).select('*').single();
+    if (error) throw error;
+    return inserted || null;
+  }
+
+  function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   return {
     start,
     debug,
@@ -484,6 +523,8 @@ window.TeakRoomDB = (function () {
     invalidateCatalogCache,
     listQuotes,
     saveQuote,
-    deleteQuote
+    deleteQuote,
+    insertCategory,
+    insertProduct
   };
 })();
