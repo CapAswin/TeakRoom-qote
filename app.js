@@ -154,19 +154,32 @@ function writeHistory(arr) {
   catch { /* quota exceeded — silently drop */ }
 }
 
+function newQuoteId() {
+  try {
+    if (crypto.randomUUID) return crypto.randomUUID();
+  } catch (e) { /* ignore */ }
+  return String(Date.now());
+}
+
 function saveToHistory() {
   const hasItems = data.some(s => s.items.length > 0);
   const hasMeta = meta.qno || meta.client || meta.place;
   if (!hasItems && !hasMeta) return;
-  const history = loadHistory();
-  history.unshift({
-    id: Date.now(),
+  const entry = {
+    id: newQuoteId(),
     meta: { ...meta },
     data: JSON.parse(JSON.stringify(data)),
     savedAt: new Date().toISOString()
-  });
+  };
+  const history = loadHistory();
+  history.unshift(entry);
   if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
   writeHistory(history);
+  if (window.TeakRoomDB && TeakRoomDB.isReady()) {
+    TeakRoomDB.saveQuote(entry).catch(err => {
+      console.warn('Cloud save failed:', err.message || err);
+    });
+  }
 }
 
 /* ---------- Theme ---------- */
@@ -955,14 +968,46 @@ const catalogState = { data: null };
 let modalInsertAt = null;
 let modalMode = null; // 'init' (first-run/new quote) or 'add' (add to existing quote)
 
+async function loadLocalCatalog() {
+  const res = await fetch('catalog.json');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
 async function loadCatalog() {
+  let remote = null;
+  if (window.TeakRoomDB && TeakRoomDB.isReady()) {
+    try {
+      remote = await TeakRoomDB.loadCatalog();
+    } catch (e) {
+      console.warn('Supabase catalog unavailable:', e.message || e);
+    }
+  }
+
   try {
-    const res = await fetch('catalog.json');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    catalogState.data = await res.json();
+    const local = await loadLocalCatalog();
+    if (remote) {
+      catalogState.data = {
+        meta: Object.keys(remote.meta || {}).length ? remote.meta : local.meta,
+        categories: remote.categories && remote.categories.length ? remote.categories : local.categories,
+        brands: remote.brands && (remote.brands.plywood || (remote.brands.hardware || []).length)
+          ? remote.brands
+          : local.brands,
+        reusable_text: Object.keys(remote.reusable_text || {}).length
+          ? { ...local.reusable_text, ...remote.reusable_text }
+          : local.reusable_text
+      };
+    } else {
+      catalogState.data = local;
+    }
     buildRoomList();
     return true;
   } catch (e) {
+    if (remote && (remote.categories || []).length) {
+      catalogState.data = remote;
+      buildRoomList();
+      return true;
+    }
     console.warn('catalog.json unavailable:', e.message);
     return false;
   }
@@ -1097,20 +1142,28 @@ function selectedRoomNames() {
     .map(row => row.dataset.room);
 }
 
+function catalogItem(p) {
+  const type = p.unit_type || 'quantity';
+  const base = {
+    name: p.name,
+    type,
+    rate: p.default_rate || 0,
+    desc: p.specification || '',
+    override: null
+  };
+  if (type === 'area') return { ...base, length: 0, height: 0 };
+  if (type === 'running') return { ...base, length: 0 };
+  if (type === 'fixed') return { ...base, amount: p.default_rate || 0 };
+  return { ...base, qty: p.qty || 1 };
+}
+
 function catalogSections(rooms) {
   const selected = new Set(rooms);
   return (catalogState.data.categories || [])
     .filter(cat => selected.has(cat.room))
     .map(cat => ({
       name: cat.room,
-      items: (cat.products || []).map(p => ({
-        name: p.name,
-        type: 'quantity',
-        qty: p.qty || 1,
-        rate: p.default_rate || 0,
-        desc: p.specification || '',
-        override: null
-      }))
+      items: (cat.products || []).map(catalogItem)
     }));
 }
 
@@ -1201,17 +1254,48 @@ $('#roomModalBtn').addEventListener('click', () => {
 });
 
 /* ---------- Init ---------- */
+function hideDataLoader() {
+  const el = $('#dataLoader');
+  document.body.classList.remove('app-loading');
+  if (!el || el.hidden) return;
+  el.setAttribute('aria-busy', 'false');
+  el.classList.add('is-done');
+  setTimeout(() => { el.hidden = true; }, 220);
+}
+
+function startEditor() {
+  loadState();
+  syncMetaInputs();
+  render();
+  return loadCatalog()
+    .then(ok => {
+      if (!ok) return;
+      const noItems = !data.some(sec => sec.items.length > 0);
+      const noMeta = !(meta.qno || meta.client || meta.place);
+      if (noItems && noMeta) openRoomModal('init');
+    })
+    .catch(err => {
+      console.warn('Catalog load failed:', err.message || err);
+    })
+    .finally(hideDataLoader);
+}
+
 loadTheme();
 loadViewSettings();
 applyViewSettings();
-loadState();
-syncMetaInputs();
-render();
 
-/* First-run: if the quote has no items yet, offer rooms from the catalog. */
-loadCatalog().then(ok => {
-  if (!ok) return;
-  const noItems = !data.some(sec => sec.items.length > 0);
-  const noMeta = !(meta.qno || meta.client || meta.place);
-  if (noItems && noMeta) openRoomModal('init');
-});
+if (window.TeakRoomDB) {
+  TeakRoomDB.start().then(() => {
+    if (TeakRoomDB.isConfigured() && !TeakRoomDB.isSignedIn()) {
+      hideDataLoader();
+      TeakRoomDB.onSignedIn(startEditor);
+      return;
+    }
+    startEditor();
+  }).catch(err => {
+    console.warn('Supabase init failed:', err.message || err);
+    startEditor();
+  });
+} else {
+  startEditor();
+}
