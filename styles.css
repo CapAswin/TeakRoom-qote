@@ -764,6 +764,14 @@ main {
   color: var(--ink);
 }
 
+.section-head .sec-index {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 .sec-dupe,
 .sec-remove {
   background: transparent;
@@ -814,6 +822,14 @@ main {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.item-name-row .item-index {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--muted);
+  flex-shrink: 0;
 }
 
 /* Pricing type selector */

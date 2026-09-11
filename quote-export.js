@@ -49,6 +49,12 @@ function inr(n, decimals) {
   return '₹ ' + v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 
+/* Sub-head serial: a, b, c … z, aa, ab … (mirrors app.js) */
+function alphaIndex(n) {
+  if (n < 26) return String.fromCharCode(97 + n);
+  return alphaIndex(Math.floor(n / 26) - 1) + String.fromCharCode(97 + (n % 26));
+}
+
 function itemExportRow(item) {
   const amt = computeAmount(item);
   const desc = item.desc || '';
@@ -82,10 +88,13 @@ function itemExportRow(item) {
 }
 
 function quoteSections() {
-  return data.map(sec => {
-    const items = (sec.items || []).map(itemExportRow);
+  return data.map((sec, sIdx) => {
+    const items = (sec.items || []).map((item, iIdx) => Object.assign(
+      { letter: alphaIndex(iIdx) },
+      itemExportRow(item)
+    ));
     const total = items.reduce((s, it) => s + num(it.amount), 0);
-    return { name: sec.name || 'SECTION', items, total };
+    return { num: sIdx + 1, name: sec.name || 'SECTION', items, total };
   });
 }
 
@@ -151,7 +160,7 @@ async function exportOfficialExcel() {
     views: [{ showGridLines: false }]
   });
 
-  [16, 14, 32, 16, 14, 12, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [6, 16, 14, 32, 16, 14, 12, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
 
   const thin = { style: 'thin', color: { argb: 'FF000000' } };
   const border = { top: thin, left: thin, bottom: thin, right: thin };
@@ -177,18 +186,18 @@ async function exportOfficialExcel() {
   };
 
   let r = 1;
-  paintRange(r, r, 1, 7, {
+  paintRange(r, r, 1, 8, {
     fill: fill(BRAND.green),
     font: font({ bold: true, color: { argb: 'FF' + BRAND.gold }, size: 16 }),
     alignment: align('center')
   });
-  ws.mergeCells(r, 1, r, 7);
+  ws.mergeCells(r, 1, r, 8);
   ws.getRow(r).height = 38;
 
   const banner = await loadAssetBase64('assets/header_banner.png');
   if (banner) {
     const imgId = wb.addImage({ base64: banner, extension: 'png' });
-    ws.addImage(imgId, { tl: { col: 0, row: 0 }, br: { col: 7, row: 1 } });
+    ws.addImage(imgId, { tl: { col: 0, row: 0 }, br: { col: 8, row: 1 } });
   } else {
     ws.getCell(r, 1).value = 'teak room interiors';
   }
@@ -196,77 +205,82 @@ async function exportOfficialExcel() {
 
   const genDate = todayDotDate();
   const validDate = fmtQuoteDate(meta.validtill);
-  paintRange(r, r, 1, 7, { alignment: align('left') });
+  paintRange(r, r, 1, 8, { alignment: align('left') });
   ws.mergeCells(r, 1, r, 3);
   paint(r, 1, 'Quotation No:' + (meta.qno || ''), { font: font(), alignment: align('left') });
   ws.mergeCells(r, 4, r, 6);
   paint(r, 4, 'DATE OF QUOTE GENERATED', { font: font(), alignment: align('center') });
+  ws.mergeCells(r, 7, r, 8);
   paint(r, 7, genDate, { font: font({ bold: true }) });
   ws.getRow(r).height = 16;
   r++;
 
-  paintRange(r, r, 1, 7, { alignment: align('left') });
+  paintRange(r, r, 1, 8, { alignment: align('left') });
   ws.mergeCells(r, 1, r, 3);
   paint(r, 1, 'Client Name: ' + (meta.client || ''), { font: font(), alignment: align('left') });
   ws.mergeCells(r, 4, r, 6);
   paint(r, 4, 'QUOTE VALID TILL', { font: font(), alignment: align('center') });
+  ws.mergeCells(r, 7, r, 8);
   paint(r, 7, validDate, { font: font({ bold: true }) });
   ws.getRow(r).height = 16;
   r++;
 
-  paintRange(r, r, 1, 7, { alignment: align('left') });
+  paintRange(r, r, 1, 8, { alignment: align('left') });
   ws.mergeCells(r, 1, r, 3);
   paint(r, 1, 'Place : ' + (meta.place || ''), { font: font(), alignment: align('left') });
-  ws.mergeCells(r, 4, r, 7);
+  ws.mergeCells(r, 4, r, 8);
   ws.getRow(r).height = 16;
   r++;
 
-  paintRange(r, r, 1, 7, { font: font({ bold: true }) });
-  ws.mergeCells(r, 2, r, 3);
-  paint(r, 2, 'Description', { font: font({ bold: true }) });
-  paint(r, 4, 'LENGTH & HEIGHT', { font: font({ bold: true }) });
-  paint(r, 5, 'Area,Sqft,Nos', { font: font({ bold: true }) });
-  paint(r, 6, 'Rate/Sqft', { font: font({ bold: true }) });
-  paint(r, 7, 'Amount', { font: font({ bold: true }) });
+  paintRange(r, r, 1, 8, { font: font({ bold: true }) });
+  paint(r, 1, 'S.No', { font: font({ bold: true }) });
+  ws.mergeCells(r, 3, r, 4);
+  paint(r, 3, 'Description', { font: font({ bold: true }) });
+  paint(r, 5, 'LENGTH & HEIGHT', { font: font({ bold: true }) });
+  paint(r, 6, 'Area,Sqft,Nos', { font: font({ bold: true }) });
+  paint(r, 7, 'Rate/Sqft', { font: font({ bold: true }) });
+  paint(r, 8, 'Amount', { font: font({ bold: true }) });
   ws.getRow(r).height = 16;
   r++;
 
   const inrFmt = '"₹"#,##,##0.00';
 
   sections.forEach(sec => {
-    paintRange(r, r, 1, 7, {
+    paintRange(r, r, 1, 8, {
       fill: fill(BRAND.green),
       font: font({ bold: true, color: { argb: 'FFFFFFFF' } })
     });
-    ws.mergeCells(r, 1, r, 7);
-    ws.getCell(r, 1).value = String(sec.name).toUpperCase();
+    paint(r, 1, sec.num, { font: font({ bold: true, color: { argb: 'FFFFFFFF' } }) });
+    ws.mergeCells(r, 2, r, 8);
+    ws.getCell(r, 2).value = String(sec.name).toUpperCase();
     ws.getRow(r).height = 16;
     r++;
 
     sec.items.forEach(it => {
-      paintRange(r, r, 1, 7, { alignment: align('center') });
-      paint(r, 1, it.name, { font: font({ bold: true }), alignment: align('center') });
-      ws.mergeCells(r, 2, r, 3);
-      paint(r, 2, it.desc, { font: font(), alignment: align('left') });
-      paint(r, 4, it.dim, { font: font() });
-      const areaCell = paint(r, 5, it.area, { font: font() });
+      paintRange(r, r, 1, 8, { alignment: align('center') });
+      paint(r, 1, it.letter, { font: font({ bold: true }) });
+      paint(r, 2, it.name, { font: font({ bold: true }), alignment: align('center') });
+      ws.mergeCells(r, 3, r, 4);
+      paint(r, 3, it.desc, { font: font(), alignment: align('left') });
+      paint(r, 5, it.dim, { font: font() });
+      const areaCell = paint(r, 6, it.area, { font: font() });
       if (typeof it.area === 'number') areaCell.numFmt = '0.##';
-      const rateCell = paint(r, 6, it.rate === '' ? '' : it.rate, { font: font() });
+      const rateCell = paint(r, 7, it.rate === '' ? '' : it.rate, { font: font() });
       if (typeof it.rate === 'number') rateCell.numFmt = '0';
-      paint(r, 7, it.amount, { font: font({ bold: true, size: 9 }), alignment: align('right'), numFmt: inrFmt });
+      paint(r, 8, it.amount, { font: font({ bold: true, size: 9 }), alignment: align('right'), numFmt: inrFmt });
       const descLen = String(it.desc || '').length;
       ws.getRow(r).height = descLen > 160 ? 48 : descLen > 80 ? 32 : 20;
       r++;
     });
 
-    paintRange(r, r, 1, 7, {
+    paintRange(r, r, 1, 8, {
       fill: fill(BRAND.peach),
       font: font({ bold: true, size: 10 }),
       alignment: align('right')
     });
-    ws.mergeCells(r, 1, r, 6);
+    ws.mergeCells(r, 1, r, 7);
     ws.getCell(r, 1).value = 'TOTAL';
-    paint(r, 7, sec.total, {
+    paint(r, 8, sec.total, {
       fill: fill(BRAND.peach),
       font: font({ bold: true, size: 10 }),
       alignment: align('right'),
@@ -277,14 +291,14 @@ async function exportOfficialExcel() {
   });
 
   const grand = quoteGrand(sections);
-  paintRange(r, r, 1, 7, {
+  paintRange(r, r, 1, 8, {
     fill: fill(BRAND.blue),
     font: font({ bold: true, size: 11 }),
     alignment: align('right')
   });
-  ws.mergeCells(r, 1, r, 6);
+  ws.mergeCells(r, 1, r, 7);
   ws.getCell(r, 1).value = 'GRAND TOTAL';
-  paint(r, 7, grand, {
+  paint(r, 8, grand, {
     fill: fill(BRAND.blue),
     font: font({ bold: true, size: 11 }),
     alignment: align('right'),
@@ -294,59 +308,59 @@ async function exportOfficialExcel() {
   r++;
 
   const band = (title) => {
-    paintRange(r, r, 1, 7, {
+    paintRange(r, r, 1, 8, {
       fill: fill(BRAND.green),
       font: font({ bold: true, color: { argb: 'FFFFFFFF' } })
     });
-    ws.mergeCells(r, 1, r, 7);
+    ws.mergeCells(r, 1, r, 8);
     ws.getCell(r, 1).value = title;
     ws.getRow(r).height = 16;
     r++;
   };
 
   band('CORE METERIAL BRAND');
-  paintRange(r, r, 1, 7, { font: font({ bold: true }) });
-  ws.mergeCells(r, 1, r, 7);
+  paintRange(r, r, 1, 8, { font: font({ bold: true }) });
+  ws.mergeCells(r, 1, r, 8);
   ws.getCell(r, 1).value = '16MM GREENLAM MIKASA 710 MARINE PLYWOOD';
   ws.getRow(r).height = 16;
   r++;
 
   const mikasa = await loadAssetBase64('assets/mikasa_logos.png');
-  paintRange(r, r, 1, 7, {});
-  ws.mergeCells(r, 1, r, 7);
+  paintRange(r, r, 1, 8, {});
+  ws.mergeCells(r, 1, r, 8);
   ws.getRow(r).height = 42;
   if (mikasa) {
     const id = wb.addImage({ base64: mikasa, extension: 'png' });
-    ws.addImage(id, { tl: { col: 0, row: r - 1 }, br: { col: 7, row: r } });
+    ws.addImage(id, { tl: { col: 0, row: r - 1 }, br: { col: 8, row: r } });
   }
   r++;
 
   band('HARDWARE METERIAL BRAND');
   const hw = await loadAssetBase64('assets/hardware_brands.png');
-  paintRange(r, r, 1, 7, {});
-  ws.mergeCells(r, 1, r, 7);
+  paintRange(r, r, 1, 8, {});
+  ws.mergeCells(r, 1, r, 8);
   ws.getRow(r).height = 40;
   if (hw) {
     const id = wb.addImage({ base64: hw, extension: 'png' });
-    ws.addImage(id, { tl: { col: 0, row: r - 1 }, br: { col: 7, row: r } });
+    ws.addImage(id, { tl: { col: 0, row: r - 1 }, br: { col: 8, row: r } });
   }
   r++;
 
   band('NOTE');
   getQuoteNotes().forEach(note => {
-    paintRange(r, r, 1, 7, { alignment: align('left') });
-    ws.mergeCells(r, 2, r, 7);
+    paintRange(r, r, 1, 8, { alignment: align('left') });
+    ws.mergeCells(r, 2, r, 8);
     paint(r, 2, note, { font: font(), alignment: align('left') });
     ws.getRow(r).height = note.length > 90 ? 28 : 16;
     r++;
   });
 
-  paintRange(r, r, 1, 7, {});
+  paintRange(r, r, 1, 8, {});
   paint(r, 1, 'BANK DETAILS', { font: font({ bold: true }) });
-  ws.mergeCells(r, 2, r, 7);
+  ws.mergeCells(r, 2, r, 8);
   ws.getRow(r).height = 18;
 
-  ws.pageSetup.printArea = 'A1:G' + r;
+  ws.pageSetup.printArea = 'A1:H' + r;
 
   const buf = await wb.xlsx.writeBuffer();
   downloadBlob(
@@ -371,6 +385,7 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
       const area = it.area === '' || it.area == null ? '' : (typeof it.area === 'number' ? fmtNum(it.area) : escapeHtml(it.area));
       const rate = it.rate === '' || it.rate == null ? '' : fmtNum(it.rate);
       return '<tr class="item">' +
+        '<td class="sno">' + it.letter + '</td>' +
         '<td class="name">' + escapeHtml(it.name) + '</td>' +
         '<td class="desc" colspan="2">' + escapeHtml(it.desc) + '</td>' +
         '<td>' + escapeHtml(it.dim) + '</td>' +
@@ -379,13 +394,13 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
         '<td class="amt">' + inr(it.amount, 2) + '</td>' +
         '</tr>';
     }).join('');
-    return '<tr class="sec"><td colspan="7">' + escapeHtml(String(sec.name).toUpperCase()) + '</td></tr>' +
+    return '<tr class="sec"><td class="sno">' + sec.num + '</td><td colspan="7">' + escapeHtml(String(sec.name).toUpperCase()) + '</td></tr>' +
       items +
-      '<tr class="total"><td colspan="6">TOTAL</td><td class="amt">' + inr(sec.total, 0) + '</td></tr>';
+      '<tr class="total"><td colspan="7">TOTAL</td><td class="amt">' + inr(sec.total, 0) + '</td></tr>';
   }).join('');
 
   const notes = getQuoteNotes().map(n =>
-    '<tr class="note"><td></td><td colspan="6">' + escapeHtml(n) + '</td></tr>'
+    '<tr class="note"><td></td><td colspan="7">' + escapeHtml(n) + '</td></tr>'
   ).join('');
   const banner = bannerSrc
     ? '<img src="' + bannerSrc + '" alt="teak room interiors">'
@@ -412,6 +427,7 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
   .meta .right { text-align: center; font-weight: 700; }
   .cols td { font-weight: 700; }
   .sec td { background: #1E4E3F; color: #fff; font-weight: 700; letter-spacing: 0.04em; }
+  .sno { font-weight: 700; }
   .item .name { font-weight: 700; }
   .item .desc { text-align: left; font-weight: 400; }
   .item .amt { font-weight: 700; text-align: right; white-space: nowrap; }
@@ -423,32 +439,33 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
   .logo-row img { max-height: 44px; width: 100%; object-fit: contain; }
   .note td { text-align: left; font-weight: 400; }
   .hw-fallback { padding: 12px; font-weight: 700; letter-spacing: 0.08em; }
-  col.c1 { width: 14%; } col.c2 { width: 12%; } col.c3 { width: 28%; }
-  col.c4 { width: 14%; } col.c5 { width: 11%; } col.c6 { width: 9%; } col.c7 { width: 12%; }
+  col.c0 { width: 4%; } col.c1 { width: 13%; } col.c2 { width: 12%; } col.c3 { width: 26%; }
+  col.c4 { width: 13%; } col.c5 { width: 10%; } col.c6 { width: 8%; } col.c7 { width: 14%; }
 </style>
 </head>
 <body>
 <table>
   <colgroup>
-    <col class="c1"><col class="c2"><col class="c3"><col class="c4">
+    <col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4">
     <col class="c5"><col class="c6"><col class="c7">
   </colgroup>
-  <tr class="banner"><td colspan="7">${banner}</td></tr>
+  <tr class="banner"><td colspan="8">${banner}</td></tr>
   <tr class="meta">
     <td colspan="3">Quotation No:${escapeHtml(meta.qno || '')}</td>
     <td colspan="3">DATE OF QUOTE GENERATED</td>
-    <td class="right">${escapeHtml(genDate)}</td>
+    <td class="right" colspan="2">${escapeHtml(genDate)}</td>
   </tr>
   <tr class="meta">
     <td colspan="3">Client Name: ${escapeHtml(meta.client || '')}</td>
     <td colspan="3">QUOTE VALID TILL</td>
-    <td class="right">${escapeHtml(validDate)}</td>
+    <td class="right" colspan="2">${escapeHtml(validDate)}</td>
   </tr>
   <tr class="meta">
     <td colspan="3">Place : ${escapeHtml(meta.place || '')}</td>
-    <td colspan="4"></td>
+    <td colspan="5"></td>
   </tr>
   <tr class="cols">
+    <td>S.No</td>
     <td></td>
     <td colspan="2">Description</td>
     <td>LENGTH &amp; HEIGHT</td>
@@ -457,15 +474,15 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
     <td>Amount</td>
   </tr>
   ${sectionHtml}
-  <tr class="grand"><td colspan="6">GRAND TOTAL</td><td class="amt">${inr(grand, 0)}</td></tr>
-  <tr class="band"><td colspan="7">CORE METERIAL BRAND</td></tr>
-  <tr class="brand"><td colspan="7">16MM GREENLAM MIKASA 710 MARINE PLYWOOD</td></tr>
-  <tr class="logo-row"><td colspan="7">${mikasa}</td></tr>
-  <tr class="band"><td colspan="7">HARDWARE METERIAL BRAND</td></tr>
-  <tr class="logo-row"><td colspan="7">${hw}</td></tr>
-  <tr class="band"><td colspan="7">NOTE</td></tr>
+  <tr class="grand"><td colspan="7">GRAND TOTAL</td><td class="amt">${inr(grand, 0)}</td></tr>
+  <tr class="band"><td colspan="8">CORE METERIAL BRAND</td></tr>
+  <tr class="brand"><td colspan="8">16MM GREENLAM MIKASA 710 MARINE PLYWOOD</td></tr>
+  <tr class="logo-row"><td colspan="8">${mikasa}</td></tr>
+  <tr class="band"><td colspan="8">HARDWARE METERIAL BRAND</td></tr>
+  <tr class="logo-row"><td colspan="8">${hw}</td></tr>
+  <tr class="band"><td colspan="8">NOTE</td></tr>
   ${notes}
-  <tr><td>BANK DETAILS</td><td colspan="6"></td></tr>
+  <tr><td>BANK DETAILS</td><td colspan="7"></td></tr>
 </table>
 </body>
 </html>`;
