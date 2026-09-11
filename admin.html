@@ -23,14 +23,17 @@
       --teak-tint: #f3f4f6;
       --accent: #3b82f6;
       --line: #e5e7eb;
+      --hover-line: #d1d5db;
       --muted: #6b7280;
       --sub: #989fab;
+      --placeholder: #9ca3af;
       --danger: #ef4444;
       --success: #22c55e;
       --radius: 20px;
       --radius-sm: 12px;
       --shadow-sm: 0 1px 2px rgba(17,17,17,0.04);
       --shadow-md: 0 4px 12px rgba(17,17,17,0.08);
+      --focus-ring: rgba(17, 17, 17, 0.08);
       --transition: 0.15s ease;
     }
 
@@ -44,12 +47,15 @@
       --teak-tint: #2a2a2e;
       --accent: #60a5fa;
       --line: #3f3f46;
+      --hover-line: #52525b;
       --muted: #a1a1aa;
       --sub: #7f7f88;
+      --placeholder: #71717a;
       --danger: #f87171;
       --success: #4ade80;
       --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
       --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --focus-ring: rgba(255, 255, 255, 0.12);
     }
 
     body {
@@ -66,6 +72,7 @@
 
     body.auth-locked > header,
     body.auth-locked > main { visibility: hidden; }
+    body.auth-locked .data-loader { display: none !important; }
 
     .auth-gate {
       position: fixed;
@@ -92,17 +99,24 @@
     .auth-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
     .auth-card p { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
     .auth-card form { display: grid; gap: 6px; margin-top: 18px; }
-    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 8px; }
+    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-top: 8px; }
     .auth-card input {
       width: 100%;
-      padding: 10px 12px;
+      padding: 11px 14px;
       border: 1px solid var(--line);
       border-radius: var(--radius-sm);
       background: var(--panel);
       color: var(--ink);
-      font: inherit;
+      font-size: 0.95rem;
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
     }
-    .auth-card input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .auth-card input::placeholder { color: var(--placeholder); }
+    .auth-card input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .auth-card input:hover:not(:focus) { border-color: var(--hover-line); }
     .auth-card button[type="submit"] {
       margin-top: 14px;
       background: var(--accent);
@@ -790,12 +804,16 @@
 
   async function checkSession() {
     const auth = getAuthClient();
-    if (!auth) { showError('Supabase not configured.'); return; }
-    const { data: { session } } = await auth.auth.getSession();
+    if (!auth) { showError('Supabase not configured.'); document.body.classList.add('auth-locked'); hideLoader(); return; }
+    const session = await Promise.race([
+      auth.auth.getSession().then(({ data }) => data.session || null, () => null),
+      new Promise(resolve => setTimeout(() => resolve(null), 4000))
+    ]);
     if (session) {
       showApp(session.user.email);
     } else {
       document.body.classList.add('auth-locked');
+      hideLoader();
     }
   }
 

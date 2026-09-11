@@ -189,8 +189,14 @@ window.TeakRoomDB = (function () {
       }
     });
 
-    const { data } = await client.auth.getSession();
-    session = data.session || null;
+    const gotSession = await Promise.race([
+      client.auth.getSession().then(
+        r => r.data.session || null,
+        () => null
+      ),
+      new Promise(resolve => setTimeout(() => resolve(null), 4000))
+    ]);
+    session = gotSession;
     bindAuthUi();
     renderAuth();
     logTest('start', {

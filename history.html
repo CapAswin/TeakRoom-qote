@@ -23,14 +23,19 @@
       --teak-tint: #f3f4f6;
       --accent: #3b82f6;
       --line: #e5e7eb;
+      --hover-line: #d1d5db;
       --muted: #6b7280;
       --sub: #989fab;
+      --placeholder: #9ca3af;
       --danger: #ef4444;
       --bar-bg: #111111;
       --bar-fg: #ffffff;
       --strong-bg: #111111;
       --strong-fg: #ffffff;
       --radius: 20px;
+      --radius-sm: 12px;
+      --focus-ring: rgba(17, 17, 17, 0.08);
+      --transition: 0.15s ease;
     }
 
     body.dark {
@@ -43,13 +48,16 @@
       --teak-tint: #2a2a2e;
       --accent: #60a5fa;
       --line: #3f3f46;
+      --hover-line: #52525b;
       --muted: #a1a1aa;
       --sub: #7f7f88;
+      --placeholder: #71717a;
       --danger: #f87171;
       --bar-bg: #050505;
       --bar-fg: #ffffff;
       --strong-bg: #f4f4f5;
       --strong-fg: #111111;
+      --focus-ring: rgba(255, 255, 255, 0.12);
     }
 
     body {
@@ -182,16 +190,24 @@
     .auth-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
     .auth-card p { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
     .auth-card form { display: grid; gap: 6px; margin-top: 18px; }
-    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 8px; }
+    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--ink); margin-top: 8px; }
     .auth-card input {
       width: 100%;
-      padding: 10px 12px;
+      padding: 11px 14px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
       background: var(--panel);
       color: var(--ink);
-      font: inherit;
+      font-size: 0.95rem;
+      transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
     }
+    .auth-card input::placeholder { color: var(--placeholder); }
+    .auth-card input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .auth-card input:hover:not(:focus) { border-color: var(--hover-line); }
     .auth-card button[type="submit"] {
       margin-top: 14px;
       background: var(--accent);
@@ -207,6 +223,7 @@
     .auth-hint { margin-top: 16px !important; font-size: 0.78rem !important; color: var(--sub) !important; }
     body.auth-locked > header,
     body.auth-locked > main { visibility: hidden; }
+    body.auth-locked .data-loader { display: none !important; }
 
     .header-actions button:hover {
       background: var(--teak-tint);

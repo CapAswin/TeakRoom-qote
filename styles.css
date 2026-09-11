@@ -336,12 +336,33 @@ body.app-loading {
 .auth-card label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink);
   margin-top: 8px;
 }
 
 .auth-card input {
   width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.95rem;
+  transition: border-color var(--transition), background var(--transition), box-shadow var(--transition);
+}
+
+.auth-card input::placeholder {
+  color: var(--placeholder);
+}
+
+.auth-card input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.auth-card input:hover:not(:focus) {
+  border-color: var(--hover-line);
 }
 
 .auth-card .btn {
