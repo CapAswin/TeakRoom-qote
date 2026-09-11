@@ -1285,7 +1285,14 @@ loadViewSettings();
 applyViewSettings();
 
 if (window.TeakRoomDB) {
-  TeakRoomDB.start().then(startEditor).catch(err => {
+  TeakRoomDB.start().then(() => {
+    if (TeakRoomDB.isConfigured() && !TeakRoomDB.isSignedIn()) {
+      hideDataLoader();
+      TeakRoomDB.onSignedIn(startEditor);
+      return;
+    }
+    startEditor();
+  }).catch(err => {
     console.warn('Supabase init failed:', err.message || err);
     startEditor();
   });

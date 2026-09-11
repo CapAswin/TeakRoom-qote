@@ -1,10 +1,12 @@
 'use strict';
 
 /* Browser client for Teak Room tables. Uses the anon key only.
-   No login — public RLS policies decide what this key can read/write. */
+   Login is required; RLS should allow only the authenticated role. */
 window.TeakRoomDB = (function () {
   const PLACEHOLDER = 'PASTE_ANON_PUBLIC_KEY';
   let client = null;
+  let session = null;
+  const signedInListeners = [];
 
   function cfg() {
     return window.TEAKROOM_SUPABASE || {};
@@ -16,12 +18,81 @@ window.TeakRoomDB = (function () {
     return !!(url && key && key !== PLACEHOLDER);
   }
 
+  function isSignedIn() {
+    return !!(session && session.user);
+  }
+
   function isReady() {
-    return !!(client && isConfigured());
+    return !!(client && isConfigured() && isSignedIn());
   }
 
   function getClient() {
     return client;
+  }
+
+  function currentUser() {
+    return session && session.user ? session.user : null;
+  }
+
+  function onSignedIn(fn) {
+    signedInListeners.push(fn);
+    if (isSignedIn()) fn(session);
+  }
+
+  function setAuthError(msg) {
+    const el = document.getElementById('authError');
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    el.hidden = false;
+    el.textContent = msg;
+  }
+
+  function renderAuth() {
+    const configured = isConfigured();
+    const signedIn = isSignedIn();
+    const gate = document.getElementById('authGate');
+    const chip = document.getElementById('userChip');
+    const emailEl = document.getElementById('userEmail');
+    if (gate) gate.hidden = !configured || signedIn;
+    if (chip) chip.hidden = !(configured && signedIn);
+    if (emailEl) emailEl.textContent = signedIn ? (session.user.email || '') : '';
+    document.body.classList.toggle('auth-locked', configured && !signedIn);
+  }
+
+  function bindAuthUi() {
+    const form = document.getElementById('authForm') || document.getElementById('loginForm');
+    if (form && !form.dataset.bound) {
+      form.dataset.bound = '1';
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = ((document.getElementById('authEmail') || document.getElementById('loginEmail') || {}).value || '').trim();
+        const password = (document.getElementById('authPassword') || document.getElementById('loginPass') || {}).value || '';
+        const btn = document.getElementById('authSubmit') || document.getElementById('loginBtn');
+        setAuthError('');
+        if (btn) { btn.disabled = true; }
+        try {
+          const { error } = await client.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        } catch (err) {
+          setAuthError(err.message || 'Sign in failed');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      });
+    }
+
+    const out = document.getElementById('signOutBtn') || document.getElementById('logoutBtn');
+    if (out && !out.dataset.bound) {
+      out.dataset.bound = '1';
+      out.addEventListener('click', async () => {
+        try { await client.auth.signOut(); } catch (e) { /* ignore */ }
+        location.reload();
+      });
+    }
   }
 
   function logTest(label, payload) {
@@ -41,12 +112,16 @@ window.TeakRoomDB = (function () {
     };
 
     console.group('TeakRoom Supabase test');
+    report.signedIn = isSignedIn();
+    report.email = currentUser() && currentUser().email;
     logTest('config', {
       url: report.url,
       anonKeySet: report.anonKeySet,
       anonKeyLength: report.anonKeyLength,
       libraryLoaded: report.libraryLoaded,
-      ready: report.ready
+      ready: report.ready,
+      signedIn: report.signedIn,
+      email: report.email || null
     });
 
     if (!isConfigured()) {
@@ -56,6 +131,11 @@ window.TeakRoomDB = (function () {
     }
     if (!client) {
       console.warn('[TeakRoom DB] Client not started yet. Reload the page first.');
+      console.groupEnd();
+      return report;
+    }
+    if (!isSignedIn()) {
+      console.warn('[TeakRoom DB] Sign in first, then run TeakRoomDB.debug()');
       console.groupEnd();
       return report;
     }
@@ -102,12 +182,38 @@ window.TeakRoomDB = (function () {
     }
 
     client = window.supabase.createClient(cfg().url, cfg().anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false }
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
     });
 
-    logTest('start', { url: cfg().url, open: true });
-    debug().catch(err => console.error('[TeakRoom DB] debug failed', err));
-    return { mode: 'cloud' };
+    const { data } = await client.auth.getSession();
+    session = data.session || null;
+    bindAuthUi();
+    renderAuth();
+    logTest('start', {
+      url: cfg().url,
+      signedIn: isSignedIn(),
+      email: currentUser() && currentUser().email
+    });
+
+    client.auth.onAuthStateChange((event, next) => {
+      const wasIn = isSignedIn();
+      session = next;
+      renderAuth();
+      logTest('auth change', {
+        event,
+        signedIn: isSignedIn(),
+        email: currentUser() && currentUser().email
+      });
+      if (!wasIn && isSignedIn()) {
+        signedInListeners.forEach(fn => fn(session));
+      }
+    });
+
+    return { mode: isSignedIn() ? 'cloud' : 'auth' };
   }
 
   let quotesMissing = false;
@@ -318,8 +424,11 @@ window.TeakRoomDB = (function () {
     start,
     debug,
     isConfigured,
+    isSignedIn,
     isReady,
     getClient,
+    currentUser,
+    onSignedIn,
     loadCatalog,
     listQuotes,
     saveQuote,

@@ -162,7 +162,7 @@
     .auth-gate {
       position: fixed;
       inset: 0;
-      z-index: 200;
+      z-index: 320;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -430,10 +430,15 @@
       <div class="header-card">
         <h1>Quote History</h1>
         <div class="header-actions">
+          <span class="user-chip" id="userChip" hidden>
+            <span id="userEmail"></span>
+            <button type="button" id="signOutBtn">Sign out</button>
+          </span>
           <button type="button" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
             <svg class="icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="icon-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 11a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.5 2.5l1.4 1.4M12.1 12.1l1.4 1.4M13.5 2.5l-1.4 1.4M3.9 12.1l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
+          <a href="admin.html">Admin</a>
           <a href="index.html">+ New Quote</a>
         </div>
       </div>
@@ -446,6 +451,21 @@
     </div>
     <div id="quoteList"></div>
   </main>
+
+  <div class="auth-gate" id="authGate" hidden>
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <p>Use the staff account you created in Supabase.</p>
+      <form id="authForm">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="username" required placeholder="you@example.com">
+        <label for="authPassword">Password</label>
+        <input id="authPassword" type="password" autocomplete="current-password" required>
+        <p class="auth-error" id="authError" hidden></p>
+        <button type="submit" id="authSubmit">Sign in</button>
+      </form>
+    </div>
+  </div>
 
   <div class="data-loader" id="dataLoader" role="status" aria-live="polite" aria-busy="true">
     <div class="data-loader-card">
@@ -634,10 +654,18 @@
     }
 
     if (window.TeakRoomDB) {
-      TeakRoomDB.start()
-        .then(render)
-        .catch(function () { return render(); })
-        .finally(hideDataLoader);
+      TeakRoomDB.start().then(function () {
+        if (TeakRoomDB.isConfigured() && !TeakRoomDB.isSignedIn()) {
+          hideDataLoader();
+          TeakRoomDB.onSignedIn(function () {
+            Promise.resolve(render()).finally(hideDataLoader);
+          });
+          return;
+        }
+        return Promise.resolve(render()).finally(hideDataLoader);
+      }).catch(function () {
+        Promise.resolve(render()).finally(hideDataLoader);
+      });
     } else {
       Promise.resolve(render()).finally(hideDataLoader);
     }

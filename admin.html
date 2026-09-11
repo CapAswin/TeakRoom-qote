@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — TeakRoom</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Geist Mono', 'SF Mono', 'Menlo', monospace;
+      --ink: #111111;
+      --paper: #f3f4f6;
+      --panel: #ffffff;
+      --teak: #111111;
+      --teak-light: #374151;
+      --teak-tint: #f3f4f6;
+      --accent: #3b82f6;
+      --line: #e5e7eb;
+      --muted: #6b7280;
+      --sub: #989fab;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --radius: 20px;
+      --radius-sm: 12px;
+      --shadow-sm: 0 1px 2px rgba(17,17,17,0.04);
+      --shadow-md: 0 4px 12px rgba(17,17,17,0.08);
+      --transition: 0.15s ease;
+    }
+
+    body.dark {
+      color-scheme: dark;
+      --ink: #f4f4f5;
+      --paper: #0b0b0c;
+      --panel: #1c1c1f;
+      --teak: #f4f4f5;
+      --teak-light: #d4d4d8;
+      --teak-tint: #2a2a2e;
+      --accent: #60a5fa;
+      --line: #3f3f46;
+      --muted: #a1a1aa;
+      --sub: #7f7f88;
+      --danger: #f87171;
+      --success: #4ade80;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection { background: var(--teak-tint); }
+
+    body.auth-locked > header,
+    body.auth-locked > main { visibility: hidden; }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+    }
+    .auth-gate[hidden] { display: none !important; }
+
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px 26px 24px;
+      box-shadow: var(--shadow-md);
+    }
+    .auth-card h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+    .auth-card p { margin: 8px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .auth-card form { display: grid; gap: 6px; margin-top: 18px; }
+    .auth-card label { font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-top: 8px; }
+    .auth-card input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+    }
+    .auth-card input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .auth-card button[type="submit"] {
+      margin-top: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter var(--transition);
+    }
+    .auth-card button[type="submit"]:hover { filter: brightness(1.08); }
+    .auth-error { color: var(--danger); font-size: 0.85rem; min-height: 1.2em; }
+    .auth-hint { margin-top: 16px !important; font-size: 0.78rem !important; color: var(--sub) !important; }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px 0;
+    }
+
+    .header-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    header h1 {
+      font-family: var(--font-body);
+      font-weight: 800;
+      font-size: 1.3rem;
+      margin: 0;
+      letter-spacing: -0.04em;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .header-actions button, .header-actions a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 13px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      transition: background var(--transition);
+      font-family: var(--font-body);
+    }
+
+    .header-actions button:hover, .header-actions a:hover {
+      background: var(--teak-tint);
+    }
+
+    .user-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 220px;
+      font-size: 0.74rem;
+      color: var(--muted);
+      background: var(--teak-tint);
+      border: 1px solid var(--line);
+      padding: 4px 4px 4px 10px;
+      border-radius: 999px;
+    }
+    .user-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-chip button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .user-chip[hidden] { display: none !important; }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 16px 24px 80px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 5px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+      flex-shrink: 0;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--ink); background: var(--teak-tint); }
+    .tab-btn.active { background: var(--ink); color: var(--paper); }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+    .search-box input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .search-box svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .filter-select {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.85rem;
+      min-width: 140px;
+    }
+    .filter-select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 9px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition);
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--teak-tint); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-danger { border-color: var(--danger); color: var(--danger); }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    .table-wrap {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 11px 14px;
+      font-weight: 700;
+      font-size: 0.76rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: var(--teak-tint);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th:hover { color: var(--ink); }
+    th .sort-arrow { margin-left: 4px; font-size: 0.7rem; opacity: 0.4; }
+    th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--teak-tint); }
+
+    td.actions-cell {
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-body);
+    }
+    .action-btn:hover { color: var(--ink); border-color: var(--ink); }
+    .action-btn.del:hover { color: var(--danger); border-color: var(--danger); }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .pagination-btns { display: flex; gap: 6px; }
+    .pagination-btns button {
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pagination-btns button:disabled { opacity: 0.4; cursor: default; }
+    .pagination-btns button:not(:disabled):hover { background: var(--teak-tint); }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--sub);
+    }
+    .empty-state h3 { margin: 0 0 6px; font-weight: 600; color: var(--ink); }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open { opacity: 1; }
+    .modal-overlay[hidden] { display: none !important; }
+
+    .modal {
+      width: 100%;
+      max-width: 540px;
+      max-height: 85vh;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 16px 48px rgba(17,17,17,0.18);
+      display: flex;
+      flex-direction: column;
+      transform: translateY(12px);
+      transition: transform 0.2s ease;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-header h2 { margin: 0; font-size: 1.1rem; font-weight: 800; }
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close:hover { color: var(--danger); border-color: var(--danger); }
+
+    .modal-body {
+      padding: 18px 22px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .form-grid { display: grid; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.88rem;
+      font-family: var(--font-mono);
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+    }
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .form-group .hint { font-size: 0.74rem; color: var(--sub); }
+
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px 18px;
+      border-top: 1px solid var(--line);
+      gap: 8px;
+    }
+    .modal-footer .right { display: flex; gap: 8px; }
+
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      animation: toast-in 0.25s ease;
+    }
+    .toast.success { background: var(--success); color: #fff; }
+    .toast.error { background: var(--danger); color: #fff; }
+    .toast.fade-out { animation: toast-out 0.25s ease forwards; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+    @keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
+
+    .data-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: var(--paper);
+      transition: opacity 0.2s ease;
+    }
+    .data-loader.is-done { opacity: 0; pointer-events: none; }
+    .data-loader[hidden] { display: none !important; }
+    .data-loader-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(17,17,17,0.06);
+      padding: 28px 32px;
+    }
+    .data-loader-card p { margin: 0; font-size: 0.92rem; font-weight: 600; }
+    .data-loader-spin {
+      width: 28px; height: 28px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    header .icon-moon { display: block; }
+    header .icon-sun { display: none; }
+    body.dark .icon-moon { display: none; }
+    body.dark .icon-sun { display: block; }
+
+    @media (max-width: 640px) {
+      .tabs { padding: 4px; }
+      .tab-btn { padding: 7px 12px; font-size: 0.78rem; }
+      .controls { flex-direction: column; }
+      .search-box { min-width: 100%; }
+      .filter-select { width: 100%; }
+      .modal { max-width: 100%; max-height: 95vh; border-radius: 16px; }
+    }
+  </style>
+</head>
+<body class="auth-locked">
+
+  <!-- Auth Gate -->
+  <div class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <h2>Admin Login</h2>
+      <p>Sign in to manage database records.</p>
+      <form id="loginForm" autocomplete="on">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" placeholder="admin@teakroom.com" required autocomplete="email">
+        <label for="loginPass">Password</label>
+        <input type="password" id="loginPass" placeholder="Password" required autocomplete="current-password">
+        <div class="auth-error" id="authError"></div>
+        <button type="submit" id="loginBtn">Sign In</button>
+      </form>
+      <p class="auth-hint">Create a user in Supabase Dashboard &rarr; Authentication &rarr; Users &rarr; Add user</p>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-card">
+      <h1>Database Admin</h1>
+      <div class="header-actions">
+        <div class="user-chip" id="userChip" hidden>
+          <span id="userEmail"></span>
+          <button type="button" id="logoutBtn">Sign Out</button>
+        </div>
+        <button type="button" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+          <svg class="icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 8.5a5.5 5.5 0 01-7-7 5.5 5.5 0 107 7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="icon-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 11a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.5 2.5l1.4 1.4M12.1 12.1l1.4 1.4M13.5 2.5l-1.4 1.4M3.9 12.1l-1.4 1.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+        <a href="index.html">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V6l-4-4z" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v4h4" stroke="currentColor" stroke-width="1.5"/></svg>
+          Editor
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Tabs -->
+    <div class="tabs" id="tabs"></div>
+
+    <!-- Controls -->
+    <div class="controls" id="controls">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <input type="text" id="searchInput" placeholder="Search rows...">
+      </div>
+      <select class="filter-select" id="filterSelect">
+        <option value="">All</option>
+      </select>
+      <button class="btn btn-primary" id="addBtn">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add New
+      </button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-scroll" id="tableScroll">
+        <table id="dataTable">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination">
+        <span id="pageInfo"></span>
+        <div class="pagination-btns">
+          <button id="prevPage" disabled>&larr; Prev</button>
+          <button id="nextPage" disabled>Next &rarr;</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Edit Row</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="modalDelete">Delete</button>
+        <div class="right">
+          <button class="btn" id="modalCancel">Cancel</button>
+          <button class="btn btn-primary" id="modalSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Loader -->
+  <div class="data-loader" id="dataLoader" role="status" aria-live="polite" aria-busy="true">
+    <div class="data-loader-card">
+      <div class="data-loader-spin" aria-hidden="true"></div>
+      <p>Loading data...</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>
+  <script src="supabase-config.js"></script>
+  <script>
+  'use strict';
+
+  const THEME_KEY = 'teakroom-theme.v1';
+  const PAGE_SIZE = 25;
+
+  const TABLES = {
+    categories: {
+      label: 'Categories',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'room', label: 'Room', type: 'text' },
+        { key: 'sort_order', label: 'Sort Order', type: 'number' },
+        { key: 'init_selection', label: 'Init Selection', type: 'checkbox' }
+      ],
+      filterColumn: null
+    },
+    products: {
+      label: 'Products',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'specification', label: 'Specification', type: 'text' },
+        { key: 'unit_type', label: 'Unit Type', type: 'select', options: ['area', 'running', 'quantity', 'fixed'] },
+        { key: 'default_rate', label: 'Rate', type: 'number' },
+        { key: 'gst', label: 'GST %', type: 'number' },
+        { key: 'qty', label: 'Qty', type: 'number' },
+        { key: 'category_id', label: 'Category ID', type: 'text' }
+      ],
+      filterColumn: 'unit_type'
+    },
+    brands: {
+      label: 'Brands',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'category', label: 'Category', type: 'text' },
+        { key: 'kind', label: 'Kind', type: 'text' },
+        { key: 'value', label: 'Value', type: 'text' },
+        { key: 'plywood', label: 'Plywood', type: 'text' },
+        { key: 'hardware', label: 'Hardware', type: 'textarea' }
+      ],
+      filterColumn: 'category'
+    },
+    meta: {
+      label: 'Meta',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'key', label: 'Key', type: 'text' },
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'value', label: 'Value', type: 'text' },
+        { key: 'currency', label: 'Currency', type: 'text' },
+        { key: 'gst_default', label: 'GST Default', type: 'number' }
+      ],
+      filterColumn: null
+    },
+    reusable_text: {
+      label: 'Reusable Text',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'section', label: 'Section', type: 'text' },
+        { key: 'key', label: 'Key', type: 'text' },
+        { key: 'items', label: 'Items', type: 'textarea' }
+      ],
+      filterColumn: 'section'
+    },
+    quotes: {
+      label: 'Quotes',
+      columns: [
+        { key: 'id', label: 'ID', type: 'uuid', readonly: true },
+        { key: 'qno', label: 'Quote No', type: 'text' },
+        { key: 'client', label: 'Client', type: 'text' },
+        { key: 'place', label: 'Place', type: 'text' },
+        { key: 'validtill', label: 'Valid Till', type: 'text' },
+        { key: 'saved_at', label: 'Saved At', type: 'text', readonly: true }
+      ],
+      filterColumn: null
+    }
+  };
+
+  let client = null;
+  let activeTable = 'categories';
+  let rows = [];
+  let filtered = [];
+  let page = 0;
+  let sortKey = null;
+  let sortAsc = true;
+  let editingRow = null;
+  let isCreating = false;
+
+  /* --- Auth --- */
+  function getAuthClient() {
+    const cfg = window.TEAKROOM_SUPABASE || {};
+    if (!cfg.url || !cfg.anonKey) return null;
+    if (client) return client;
+    client = window.supabase.createClient(cfg.url, cfg.anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+    return client;
+  }
+
+  async function checkSession() {
+    const auth = getAuthClient();
+    if (!auth) { showError('Supabase not configured.'); return; }
+    const { data: { session } } = await auth.auth.getSession();
+    if (session) {
+      showApp(session.user.email);
+    } else {
+      document.body.classList.add('auth-locked');
+    }
+  }
+
+  function showApp(email) {
+    document.body.classList.remove('auth-locked');
+    document.getElementById('authGate').hidden = true;
+    document.getElementById('userChip').hidden = false;
+    document.getElementById('userEmail').textContent = email || '';
+    buildTabs();
+    loadTable(activeTable).finally(hideLoader);
+  }
+
+  function showError(msg) {
+    document.getElementById('authError').textContent = msg;
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const auth = getAuthClient();
+    if (!auth) { showError('Supabase not configured.'); return; }
+    const btn = document.getElementById('loginBtn');
+    btn.textContent = 'Signing in...';
+    btn.disabled = true;
+    const { data, error } = await auth.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      showError(error.message || 'Login failed');
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+      return;
+    }
+    showApp(data.user.email);
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    const auth = getAuthClient();
+    if (auth) await auth.auth.signOut();
+    document.getElementById('userChip').hidden = true;
+    document.body.classList.add('auth-locked');
+    document.getElementById('authGate').hidden = false;
+  });
+
+  /* --- Client is initialized in getAuthClient, same client for auth + data --- */
+
+  /* --- Tabs --- */
+  function buildTabs() {
+    const tabs = document.getElementById('tabs');
+    tabs.innerHTML = '';
+    Object.keys(TABLES).forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-btn' + (name === activeTable ? ' active' : '');
+      btn.textContent = TABLES[name].label;
+      btn.dataset.table = name;
+      btn.addEventListener('click', () => switchTable(name));
+      tabs.appendChild(btn);
+    });
+  }
+
+  function switchTable(name) {
+    if (name === activeTable) return;
+    activeTable = name;
+    page = 0;
+    sortKey = null;
+    sortAsc = true;
+    document.getElementById('searchInput').value = '';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.table === name));
+    loadTable(name);
+  }
+
+  /* --- Data --- */
+  async function loadTable(name) {
+    document.getElementById('dataLoader').hidden = false;
+    document.getElementById('dataLoader').classList.remove('is-done');
+    document.body.classList.add('app-loading');
+    try {
+      const { data, error } = await client.from(name).select('*');
+      if (error) throw error;
+      rows = data || [];
+    } catch (err) {
+      toast('Failed to load ' + name + ': ' + (err.message || err), 'error');
+      rows = [];
+    }
+    buildFilterOptions();
+    applyFilters();
+    hideLoader();
+  }
+
+  function hideLoader() {
+    const el = document.getElementById('dataLoader');
+    document.body.classList.remove('app-loading');
+    el.setAttribute('aria-busy', 'false');
+    el.classList.add('is-done');
+    setTimeout(() => { el.hidden = true; }, 220);
+  }
+
+  /* --- Filter / Sort / Search --- */
+  function buildFilterOptions() {
+    const sel = document.getElementById('filterSelect');
+    const tbl = TABLES[activeTable];
+    sel.innerHTML = '<option value="">All</option>';
+    if (!tbl.filterColumn) {
+      sel.style.display = 'none';
+      return;
+    }
+    sel.style.display = '';
+    const vals = [...new Set(rows.map(r => String(r[tbl.filterColumn] || '')).filter(Boolean))].sort();
+    vals.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const fv = document.getElementById('filterSelect').value;
+
+    filtered = rows.filter(row => {
+      if (fv && TABLES[activeTable].filterColumn) {
+        if (String(row[TABLES[activeTable].filterColumn] || '') !== fv) return false;
+      }
+      if (q) {
+        return TABLES[activeTable].columns.some(col => {
+          const v = row[col.key];
+          return v != null && String(v).toLowerCase().includes(q);
+        });
+      }
+      return true;
+    });
+
+    if (sortKey) {
+      filtered.sort((a, b) => {
+        let va = a[sortKey], vb = b[sortKey];
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        if (typeof va === 'number' && typeof vb === 'number') return sortAsc ? va - vb : vb - va;
+        return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+      });
+    }
+
+    const maxPage = Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1);
+    if (page > maxPage) page = maxPage;
+    renderTable();
+  }
+
+  document.getElementById('searchInput').addEventListener('input', () => { page = 0; applyFilters(); });
+  document.getElementById('filterSelect').addEventListener('change', () => { page = 0; applyFilters(); });
+
+  /* --- Render --- */
+  function renderTable() {
+    const tbl = TABLES[activeTable];
+    const head = document.getElementById('tableHead');
+    const body = document.getElementById('tableBody');
+
+    head.innerHTML = '<tr>' + tbl.columns.map(col => {
+      const sorted = sortKey === col.key;
+      const arrow = sorted ? (sortAsc ? ' \u25B2' : ' \u25BC') : ' \u25B4';
+      return '<th data-key="' + col.key + '"' + (sorted ? ' class="sorted"' : '') + '>'
+        + esc(col.label) + '<span class="sort-arrow">' + arrow + '</span></th>';
+    }).join('') + '<th style="width:70px"></th></tr>';
+
+    head.querySelectorAll('th[data-key]').forEach(th => {
+      th.addEventListener('click', () => {
+        const k = th.dataset.key;
+        if (sortKey === k) { sortAsc = !sortAsc; } else { sortKey = k; sortAsc = true; }
+        applyFilters();
+      });
+    });
+
+    const start = page * PAGE_SIZE;
+    const slice = filtered.slice(start, start + PAGE_SIZE);
+
+    if (!slice.length) {
+      body.innerHTML = '<tr><td colspan="' + (tbl.columns.length + 1) + '">'
+        + '<div class="empty-state"><h3>No records found</h3><p>Try adjusting your search or filters.</p></div>'
+        + '</td></tr>';
+    } else {
+      body.innerHTML = slice.map(row => {
+        return '<tr>' + tbl.columns.map(col => {
+          let val = row[col.key];
+          if (val == null) val = '';
+          if (col.type === 'checkbox') {
+            return '<td>' + (val ? '\u2713' : '') + '</td>';
+          }
+          const display = String(val).length > 60 ? String(val).slice(0, 60) + '...' : String(val);
+          return '<td title="' + esc(String(val)) + '">' + esc(display) + '</td>';
+        }).join('') + '<td class="actions-cell">'
+          + '<button class="action-btn edit-btn" title="Edit" data-id="' + esc(String(row.id)) + '">&#9998;</button> '
+          + '<button class="action-btn del" title="Delete" data-id="' + esc(String(row.id)) + '">&#10005;</button>'
+          + '</td></tr>';
+      }).join('');
+    }
+
+    body.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => openEdit(btn.dataset.id));
+    });
+    body.querySelectorAll('.action-btn.del').forEach(btn => {
+      btn.addEventListener('click', () => deleteRow(btn.dataset.id));
+    });
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    document.getElementById('pageInfo').textContent = total + ' record' + (total !== 1 ? 's' : '') + '  \u00B7  Page ' + (page + 1) + ' of ' + totalPages;
+    document.getElementById('prevPage').disabled = page <= 0;
+    document.getElementById('nextPage').disabled = page >= totalPages - 1;
+  }
+
+  document.getElementById('prevPage').addEventListener('click', () => { if (page > 0) { page--; renderTable(); } });
+  document.getElementById('nextPage').addEventListener('click', () => {
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (page < totalPages - 1) { page++; renderTable(); }
+  });
+
+  /* --- Add --- */
+  document.getElementById('addBtn').addEventListener('click', () => openCreate());
+
+  /* --- Modal --- */
+  function openModal() {
+    const overlay = document.getElementById('modalOverlay');
+    overlay.hidden = false;
+    requestAnimationFrame(() => overlay.classList.add('open'));
+  }
+  function closeModal() {
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.remove('open');
+    setTimeout(() => { overlay.hidden = true; }, 200);
+    editingRow = null;
+    isCreating = false;
+  }
+
+  function openCreate() {
+    isCreating = true;
+    editingRow = null;
+    document.getElementById('modalTitle').textContent = 'Add ' + TABLES[activeTable].label.replace(/s$/, '') + ' Record';
+    document.getElementById('modalDelete').style.display = 'none';
+    buildForm({});
+    openModal();
+  }
+
+  function openEdit(id) {
+    isCreating = false;
+    editingRow = rows.find(r => String(r.id) === String(id));
+    if (!editingRow) return;
+    document.getElementById('modalTitle').textContent = 'Edit Record';
+    document.getElementById('modalDelete').style.display = '';
+    buildForm(editingRow);
+    openModal();
+  }
+
+  function buildForm(row) {
+    const tbl = TABLES[activeTable];
+    const body = document.getElementById('modalBody');
+    body.innerHTML = '<div class="form-grid">' + tbl.columns.map(col => {
+      if (col.readonly) {
+        const val = row[col.key];
+        return '<div class="form-group"><label>' + esc(col.label) + '</label>'
+          + '<input type="text" value="' + esc(val != null ? String(val) : '(auto)') + '" disabled></div>';
+      }
+      const val = row[col.key];
+      if (col.type === 'checkbox') {
+        return '<div class="form-group"><label>'
+          + '<input type="checkbox" id="field_' + col.key + '" ' + (val ? 'checked' : '') + '> '
+          + esc(col.label) + '</label></div>';
+      }
+      if (col.type === 'select') {
+        const opts = (col.options || []).map(o => '<option value="' + o + '"' + (val === o ? ' selected' : '') + '>' + o + '</option>').join('');
+        return '<div class="form-group"><label>' + esc(col.label) + '</label>'
+          + '<select id="field_' + col.key + '">' + opts + '</select></div>';
+      }
+      if (col.type === 'textarea') {
+        const display = typeof val === 'object' ? JSON.stringify(val, null, 2) : (val || '');
+        return '<div class="form-group"><label>' + esc(col.label) + '</label>'
+          + '<textarea id="field_' + col.key + '" placeholder="' + esc(col.label) + '">' + esc(String(display)) + '</textarea></div>';
+      }
+      if (col.type === 'number') {
+        return '<div class="form-group"><label>' + esc(col.label) + '</label>'
+          + '<input type="number" id="field_' + col.key + '" value="' + esc(val != null ? val : '') + '" step="any"></div>';
+      }
+      return '<div class="form-group"><label>' + esc(col.label) + '</label>'
+        + '<input type="text" id="field_' + col.key + '" value="' + esc(val != null ? val : '') + '" placeholder="' + esc(col.label) + '"></div>';
+    }).join('') + '</div>';
+  }
+
+  function collectForm() {
+    const tbl = TABLES[activeTable];
+    const out = {};
+    tbl.columns.forEach(col => {
+      if (col.readonly) return;
+      const el = document.getElementById('field_' + col.key);
+      if (!el) return;
+      if (col.type === 'checkbox') { out[col.key] = el.checked; return; }
+      let val = el.value.trim();
+      if (col.type === 'number') { val = val === '' ? null : Number(val); }
+      if (col.type === 'textarea') {
+        try { val = JSON.parse(val); } catch { val = val; }
+      }
+      out[col.key] = val;
+    });
+    return out;
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+  document.getElementById('modalSave').addEventListener('click', async () => {
+    const data = collectForm();
+    try {
+      if (isCreating) {
+        const { error } = await client.from(activeTable).insert(data);
+        if (error) throw error;
+        toast('Record created', 'success');
+      } else {
+        const { error } = await client.from(activeTable).update(data).eq('id', editingRow.id);
+        if (error) throw error;
+        toast('Record updated', 'success');
+      }
+      closeModal();
+      loadTable(activeTable);
+    } catch (err) {
+      toast('Save failed: ' + (err.message || err), 'error');
+    }
+  });
+
+  document.getElementById('modalDelete').addEventListener('click', async () => {
+    if (!editingRow) return;
+    if (!confirm('Delete this record permanently?')) return;
+    try {
+      const { error } = await client.from(activeTable).delete().eq('id', editingRow.id);
+      if (error) throw error;
+      toast('Record deleted', 'success');
+      closeModal();
+      loadTable(activeTable);
+    } catch (err) {
+      toast('Delete failed: ' + (err.message || err), 'error');
+    }
+  });
+
+  async function deleteRow(id) {
+    if (!confirm('Delete this record permanently?')) return;
+    try {
+      const { error } = await client.from(activeTable).delete().eq('id', id);
+      if (error) throw error;
+      toast('Record deleted', 'success');
+      loadTable(activeTable);
+    } catch (err) {
+      toast('Delete failed: ' + (err.message || err), 'error');
+    }
+  }
+
+  /* --- Toast --- */
+  function toast(msg, type) {
+    const container = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = 'toast' + (type ? ' ' + type : '');
+    el.textContent = msg;
+    container.appendChild(el);
+    setTimeout(() => { el.classList.add('fade-out'); }, 2500);
+    setTimeout(() => { el.remove(); }, 2800);
+  }
+
+  /* --- Theme --- */
+  function applyTheme(dark) { document.body.classList.toggle('dark', dark); }
+  function loadTheme() {
+    try { applyTheme(localStorage.getItem(THEME_KEY) === 'dark'); }
+    catch { applyTheme(false); }
+  }
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const isDark = document.body.classList.contains('dark');
+    applyTheme(!isDark);
+    try { localStorage.setItem(THEME_KEY, isDark ? 'light' : 'dark'); } catch {}
+  });
+  loadTheme();
+
+  /* --- Util --- */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* --- Keyboard --- */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('modalOverlay');
+      if (!overlay.hidden) closeModal();
+    }
+  });
+
+  /* --- Init --- */
+  checkSession();
+  </script>
+</body>
+</html>
