@@ -303,6 +303,32 @@
     </div>
   </div>
 
+  <!-- Reusable text modal — shown before each export; edits are one-use only -->
+  <div class="modal-overlay" id="exportModal" aria-hidden="true" role="dialog" aria-label="Review reusable text before export">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2 id="exportModalTitle">Quote notes</h2>
+          <p class="modal-sub">Review or edit the reusable text for this export only — it will not be saved to the catalog.</p>
+        </div>
+        <button type="button" class="modal-close" id="exportModalClose" title="Close (Esc)" aria-label="Close dialog">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label>Notes shown in the export</label>
+        <div class="modal-list" id="exportNotesList"></div>
+        <button type="button" class="product-pick product-pick-new" id="exportNotesAddRow">+ Add note</button>
+        <span class="modal-body-hint">Edits apply to this single export only — the catalog is not changed.</span>
+      </div>
+      <div class="modal-foot">
+        <span class="modal-foot-spacer"></span>
+        <button type="button" class="btn" id="exportModalCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="exportModalConfirm">Export Excel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.js"></script>

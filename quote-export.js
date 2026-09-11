@@ -19,7 +19,22 @@ const QUOTE_NOTES = [
   '6.Exclusion   :   Counter top/Dado tiles/Light fixtures/Electrical and Plumbing work/Any kind of Appliances/Any kind of Civil works are not part of our Offer.'
 ];
 
+let notesOverride = null;
+
+/* Used by the export modal: apply edited reusable text to this single export
+   only. The catalog / database is never touched. */
+function setNotesOverride(lines) {
+  if (lines == null) {
+    notesOverride = null;
+  } else {
+    notesOverride = (Array.isArray(lines) ? lines : String(lines).split(/\r?\n/))
+      .map(s => String(s).trim())
+      .filter(Boolean);
+  }
+}
+
 function getQuoteNotes() {
+  if (notesOverride !== null) return notesOverride;
   const pack = (typeof catalogState !== 'undefined' && catalogState.data && catalogState.data.reusable_text) || {};
   const items = pack.notes;
   if (!Array.isArray(items) || !items.length) return QUOTE_NOTES;
@@ -259,7 +274,7 @@ async function exportOfficialExcel() {
     sec.items.forEach(it => {
       paintRange(r, r, 1, 8, { alignment: align('center') });
       paint(r, 1, it.letter, { font: font({ bold: true }) });
-      paint(r, 2, it.name, { font: font({ bold: true }), alignment: align('center') });
+      paint(r, 2, it.name, { font: font({ bold: true }), alignment: align('left') });
       ws.mergeCells(r, 3, r, 4);
       paint(r, 3, it.desc, { font: font(), alignment: align('left') });
       paint(r, 5, it.dim, { font: font() });
@@ -428,7 +443,7 @@ function officialQuoteHTML(bannerSrc, mikasaSrc, hwSrc) {
   .cols td { font-weight: 700; }
   .sec td { background: #1E4E3F; color: #fff; font-weight: 700; letter-spacing: 0.04em; }
   .sno { font-weight: 700; }
-  .item .name { font-weight: 700; }
+  .item .name { font-weight: 700; text-align: left; }
   .item .desc { text-align: left; font-weight: 400; }
   .item .amt { font-weight: 700; text-align: right; white-space: nowrap; }
   .total td { background: #F8CBAD; font-weight: 700; text-align: right; }

@@ -893,8 +893,84 @@ function exportPdf() {
     .catch(err => showToast('PDF export failed: ' + err.message));
 }
 
-$('#exportExcelBtn').addEventListener('click', exportExcel);
-$('#exportPdfBtn').addEventListener('click', exportPdf);
+/* ---------- Reusable text modal ----------
+   Every export first asks to confirm/edit the reusable quote notes. The edited
+   text is used ONLY for this single export — it is never written anywhere. */
+let exportPending = null;
+
+function exportIsOpen() {
+  return $('#exportModal').getAttribute('aria-hidden') === 'false';
+}
+
+function openExportModal(mode) {
+  exportPending = mode;
+  const list = $('#exportNotesList');
+  list.innerHTML = '';
+  getQuoteNotes().forEach(text => addExportRow(list, text));
+  $('#exportModalConfirm').textContent = mode === 'pdf' ? 'Export PDF' : 'Export Excel';
+  $('#exportModal').setAttribute('aria-hidden', 'false');
+  document.body.classList.add('modal-open');
+  setTimeout(() => {
+    const first = list.querySelector('input');
+    if (first) { first.focus(); first.select(); }
+  }, 0);
+}
+
+function addExportRow(list, text) {
+  const row = document.createElement('div');
+  row.className = 'export-note-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = text || '';
+  input.placeholder = 'Add a note…';
+  input.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      confirmExport();
+    }
+  });
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'remove-btn no-print';
+  del.title = 'Remove this note';
+  del.setAttribute('aria-label', 'Remove this note');
+  del.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  del.addEventListener('click', () => row.remove());
+  row.append(input, del);
+  list.appendChild(row);
+}
+
+function collectExportRows() {
+  return Array.from($('#exportNotesList').querySelectorAll('input'))
+    .map(i => i.value.trim())
+    .filter(Boolean);
+}
+
+function closeExportModal() {
+  $('#exportModal').setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('modal-open');
+  exportPending = null;
+}
+
+function confirmExport() {
+  const mode = exportPending;
+  if (!mode) return;
+  setNotesOverride(collectExportRows());
+  closeExportModal();
+  if (mode === 'pdf') exportPdf();
+  else exportExcel();
+}
+
+$('#exportExcelBtn').addEventListener('click', () => openExportModal('excel'));
+$('#exportPdfBtn').addEventListener('click', () => openExportModal('pdf'));
+$('#exportNotesAddRow').addEventListener('click', () => addExportRow($('#exportNotesList'), ''));
+$('#exportModalConfirm').addEventListener('click', confirmExport);
+$('#exportModalCancel').addEventListener('click', closeExportModal);
+$('#exportModalClose').addEventListener('click', closeExportModal);
+$('#exportModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeExportModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && exportIsOpen()) closeExportModal();
+});
 
 /* ---------- Reset ---------- */
 $('#resetBtn').addEventListener('click', () => {
