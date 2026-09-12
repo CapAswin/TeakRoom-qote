@@ -2117,6 +2117,16 @@ body.modal-open {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
+.export-note-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.export-note-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .modal-body textarea:focus {
   outline: none;
   border-color: var(--accent);
