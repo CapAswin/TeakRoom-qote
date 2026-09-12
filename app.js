@@ -753,84 +753,169 @@ $('#addSectionBtn').addEventListener('click', () => {
 /* ---------- Excel import ---------- */
 const EXPORT_HEADER = ['Description', 'Pricing', 'Length', 'Height', 'Qty', 'Rate', 'Amount'];
 
+function cellStr(row, i) {
+  const v = row[i];
+  return String(v == null ? '' : v).trim();
+}
+
+function isoFromQuoteDate(v) {
+  if (v == null || v === '') return '';
+  if (typeof v === 'number' && v > 20000 && typeof XLSX !== 'undefined' && XLSX.SSF && XLSX.SSF.parse_date_code) {
+    const d = XLSX.SSF.parse_date_code(v);
+    if (d) {
+      const pad = n => String(n).padStart(2, '0');
+      return d.y + '-' + pad(d.m) + '-' + pad(d.d);
+    }
+  }
+  const s = String(v).trim();
+  const dot = s.match(/^(\d{1,2})[./\-](\d{1,2})[./\-](\d{4})$/);
+  if (dot) return dot[3] + '-' + dot[2].padStart(2, '0') + '-' + dot[1].padStart(2, '0');
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+  return '';
+}
+
+function parseDimPair(dim) {
+  const m = String(dim || '').match(/([\d.]+)\s*[x×]\s*([\d.]+)/i);
+  if (!m) return null;
+  return { length: num(m[1]), height: num(m[2]) };
+}
+
+function detectImportFormat(rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const cells = [];
+    for (let c = 0; c < 8; c++) cells.push(cellStr(row, c));
+    const joined = cells.join(' ').toLowerCase();
+    if (cells[0] === EXPORT_HEADER[0] && cells[1] === EXPORT_HEADER[1]) return 'new';
+    if (/s\.?\s*no/i.test(cells[0]) && /description/i.test(joined) && /length/i.test(joined)) {
+      return /amount/i.test(cells[7] || '') || cells[7] !== '' || /rate/i.test(cells[6] || '')
+        ? 'official8'
+        : 'official';
+    }
+    if (cells[1].toLowerCase() === 'description' && /length/i.test(joined)) return 'official';
+  }
+  return 'old';
+}
+
+function officialItemFromCells(name, desc, dim, areaRaw, rateRaw, amtRaw) {
+  const areaText = String(areaRaw == null ? '' : areaRaw);
+  const pair = parseDimPair(dim);
+  if (/lumpsum/i.test(areaText) || ((!areaText || areaText === '') && !rateRaw && amtRaw)) {
+    return { name, type: 'fixed', amount: num(amtRaw), desc, dim };
+  }
+  if (/rft/i.test(dim)) {
+    return { name, type: 'running', length: num(areaRaw), rate: num(rateRaw), desc, dim };
+  }
+  if (/nos/i.test(areaText)) {
+    return { name, type: 'quantity', qty: num(areaRaw), rate: num(rateRaw), desc, dim };
+  }
+  if (pair) {
+    return { name, type: 'area', length: pair.length, height: pair.height, rate: num(rateRaw), desc, dim };
+  }
+  return { name, type: 'area', length: num(areaRaw), height: 1, rate: num(rateRaw), desc, dim };
+}
+
 function parseWorkbookIntoData(wb) {
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+  const format = detectImportFormat(rows);
   const out = [];
   let cur = null;
-  /* 'new' = 7-column format (this app's exports); 'old' = legacy 4-column */
-  let format = 'old';
+
+  const addItem = item => {
+    if (!cur) {
+      cur = { name: 'IMPORTED ITEMS', items: [] };
+      out.push(cur);
+    }
+    item.importedFields = { name: true };
+    Object.keys(item).forEach(k => {
+      if (k !== 'name' && k !== 'type' && k !== 'desc' && k !== 'dim') item.importedFields[k] = true;
+    });
+    cur.items.push(item);
+  };
+
+  const takeAfterColon = (labelCell, fallback) => {
+    if (labelCell.includes(':')) return labelCell.split(':').slice(1).join(':').trim() || fallback;
+    return fallback;
+  };
 
   rows.forEach(row => {
-    const c0 = String(row[0] == null ? '' : row[0]).trim();
-    const c1 = String(row[1] == null ? '' : row[1]).trim();
-    const c2 = String(row[2] == null ? '' : row[2]).trim();
-    const c3 = String(row[3] == null ? '' : row[3]).trim();
-    const c4 = String(row[4] == null ? '' : row[4]).trim();
-    const c5 = String(row[5] == null ? '' : row[5]).trim();
-    const c6 = String(row[6] == null ? '' : row[6]).trim();
-    if (!c0) {
-      if (String(c1).toLowerCase() === 'description' && /length/i.test(String(c3) + String(c2))) format = 'official';
-      return;
+    const c0 = cellStr(row, 0);
+    const c1 = cellStr(row, 1);
+    const c2 = cellStr(row, 2);
+    const c3 = cellStr(row, 3);
+    const c4 = cellStr(row, 4);
+    const c5 = cellStr(row, 5);
+    const c6 = cellStr(row, 6);
+    const c7 = cellStr(row, 7);
+    const joined = [c0, c1, c2, c3, c4, c5, c6, c7].join(' ').toLowerCase();
+
+    if (/quote valid/i.test(joined)) {
+      const iso = isoFromQuoteDate(row[6]) || isoFromQuoteDate(row[7]) || isoFromQuoteDate(c1) || isoFromQuoteDate(c6);
+      if (iso) {
+        meta.validtill = iso;
+        metaImported.validtill = true;
+      }
     }
+
+    if (!c0) return;
 
     const lc = c0.toLowerCase();
     if (lc.startsWith('quotation no')) {
-      meta.qno = (c0.split(':').slice(1).join(':').trim() || c1);
-      metaImported.qno = true;
+      const q = takeAfterColon(c0, c1);
+      if (q) { meta.qno = q; metaImported.qno = true; }
       return;
     }
     if (lc.startsWith('client name') || lc === 'client') {
-      meta.client = (c0.includes(':') ? c0.split(':').slice(1).join(':').trim() : c1);
-      metaImported.client = true;
+      const client = takeAfterColon(c0, c1);
+      if (client) { meta.client = client; metaImported.client = true; }
       return;
     }
     if (lc.startsWith('place')) {
-      meta.place = (c0.includes(':') ? c0.split(':').slice(1).join(':').trim() : c1);
-      metaImported.place = true;
+      const place = takeAfterColon(c0, c1);
+      if (place) { meta.place = place; metaImported.place = true; }
       return;
     }
-    if (lc.startsWith('quote valid')) { meta.validtill = c1; metaImported.validtill = true; return; }
-    if (c0 === EXPORT_HEADER[0] && c1 === EXPORT_HEADER[1]) { format = 'new'; return; }
-    if (String(c1).toLowerCase() === 'description' && /length/i.test(c3 + c2 + c1)) { format = 'official'; return; }
+    if (lc.startsWith('quote valid')) return;
+    if (c0 === EXPORT_HEADER[0] && c1 === EXPORT_HEADER[1]) return;
+    if (/s\.?\s*no/i.test(c0) && /description/i.test(joined)) return;
+    if (c1.toLowerCase() === 'description' && /length/i.test(joined)) return;
     if (lc === 'total' || lc === 'grand total') return;
-    if (/^(core meterial|hardware meterial|note|bank details|date of quote)/i.test(lc)) return;
+    if (/^(core meterial|hardware meterial|note|bank details|date of quote|16mm )/i.test(lc)) return;
 
-    /* A row with only column A filled is a section header */
+    if (format === 'official8') {
+      if (/^\d+$/.test(c0) && c1 && !c5 && !c6 && !c7) {
+        cur = { name: c1.toUpperCase(), items: [] };
+        out.push(cur);
+        return;
+      }
+      if (/^[a-z]{1,3}$/i.test(c0) && c1) {
+        if (/carcass|shutter|hinge|drawer|handle|boxing/i.test(c1) && !c5 && !c6 && !c7) return;
+        addItem(officialItemFromCells(c1, c2, c4, row[5] !== '' && row[5] != null ? row[5] : c5, row[6] !== '' && row[6] != null ? row[6] : c6, row[7] !== '' && row[7] != null ? row[7] : c7));
+        return;
+      }
+      return;
+    }
+
+    if (format === 'official') {
+      if (!c1 && !c2 && !c4 && !c5 && !c6) {
+        cur = { name: c0.toUpperCase(), items: [] };
+        out.push(cur);
+        return;
+      }
+      if (/^[A-F]$/.test(c0) && /carcass|shutter|hinge|drawer|handle|boxing/i.test(c1)) return;
+      addItem(officialItemFromCells(c0, c1 && c1 !== c0 ? c1 : '', c3, row[4] !== '' && row[4] != null ? row[4] : c4, row[5] !== '' && row[5] != null ? row[5] : c5, row[6] !== '' && row[6] != null ? row[6] : c6));
+      return;
+    }
+
     if (!c1 && !c2 && !c4 && !c5 && !c6) {
       cur = { name: c0.toUpperCase(), items: [] };
       out.push(cur);
       return;
     }
-    if (!cur) { cur = { name: 'IMPORTED ITEMS', items: [] }; out.push(cur); }
-
-    const addItem = item => {
-      item.importedFields = { name: true };
-      Object.keys(item).forEach(k => {
-        if (k !== 'name' && k !== 'type' && k !== 'desc' && k !== 'dim') item.importedFields[k] = true;
-      });
-      cur.items.push(item);
-    };
 
     if (/^[A-F]$/.test(c0) && /carcass|shutter|hinge|drawer|handle|boxing/i.test(c1)) return;
-
-    if (format === 'official') {
-      const areaRaw = c4;
-      const rateRaw = c5;
-      const amtRaw = c6;
-      const dim = c3;
-      const desc = c1 && c1 !== c0 ? c1 : '';
-      if (/lumpsum/i.test(areaRaw) || (!areaRaw && !rateRaw && amtRaw)) {
-        addItem({ name: c0, type: 'fixed', amount: num(amtRaw), desc, dim });
-      } else if (/rft/i.test(dim)) {
-        addItem({ name: c0, type: 'running', length: num(areaRaw), rate: num(rateRaw), desc, dim });
-      } else if (/nos/i.test(areaRaw)) {
-        addItem({ name: c0, type: 'quantity', qty: num(areaRaw), rate: num(rateRaw), desc, dim });
-      } else {
-        addItem({ name: c0, type: 'area', length: num(areaRaw), height: 1, rate: num(rateRaw), desc, dim });
-      }
-      return;
-    }
 
     if (format === 'new') {
       const type = c1.toLowerCase();
@@ -846,7 +931,6 @@ function parseWorkbookIntoData(wb) {
       return;
     }
 
-    /* Legacy format: {'lumpsum' marker} or {area, rate} */
     if (c1.toLowerCase() === 'lumpsum') {
       addItem({ name: c0, type: 'fixed', amount: num(c3) });
     } else {
